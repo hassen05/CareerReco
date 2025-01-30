@@ -24,8 +24,8 @@ A Django-based web application that recommends the best resumes for a given job 
     python manage.py migrate
 5. Import sample resumes:
     python manage.py shell
->>> from recommender.import_resumes import import_data
->>> import_data()
+--- from recommender.import_resumes import import_data
+--- import_data()
 
 6. Run the server:
     python manage.py runserver
