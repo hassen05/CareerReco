@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <!-- Resume Recommendations -->
+  {% if recommendations %}
+  <h2 class="mb-4 text-center text-primary">Top Matches</h2>
+  <div class="row">
+    {% for resume in recommendations %}
+      <div class="col-md-4 mb-4">
+        <div class="resume-card card h-100 shadow">
+          <div class="card-body">
+            <h5 class="card-title text-primary">{{ resume.name }}</h5>
+            <p class="card-subtitle mb-2 text-muted">{{ resume.experience }} years of experience</p>
+            <div class="mb-2">
+              <span class="badge bg-secondary">Skills:</span>
+              {{ resume.skills }}
+            </div>
+            <div class="mb-2">
+              <span class="badge bg-info">Education:</span>
+              {{ resume.education }}
+            </div>
+            <div>
+              <span class="badge bg-success">Certifications:</span>
+              {{ resume.certifications }}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <div class="alert alert-warning" role="alert">
+      No matching resumes found.
+    </div>
+  {% endif %}
+{% endblock %}
