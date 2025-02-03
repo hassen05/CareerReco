@@ -4,7 +4,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from .models import Resume
 
-def import_new_data():
+def import_data():
     model = SentenceTransformer('all-MiniLM-L6-v2')
     df = pd.read_csv('resumes.csv')  # Replace with your new dataset
     
