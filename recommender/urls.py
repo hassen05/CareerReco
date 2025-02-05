@@ -1,6 +1,6 @@
 from django.urls import path
-from . import views
+from .views import RecommendAPI
 
 urlpatterns = [
-    path('', views.home, name='home'),  # Home page
+    path('recommend/', RecommendAPI.as_view(), name='recommend-api'),
 ]

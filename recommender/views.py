@@ -1,11 +1,13 @@
-from django.shortcuts import render
+from rest_framework.views import APIView
+from rest_framework.response import Response
 from .utils import load_resumes, recommend_resumes
+from .serializers import ResumeSerializer
 
-def home(request):
-    resumes = load_resumes()
-    if request.method == "POST":
-        job_desc = request.POST.get("job_description", "")
-        top_n = int(request.POST.get("top_n", 5))
+class RecommendAPI(APIView):
+    def post(self, request):
+        job_desc = request.data.get("job_description", "")
+        top_n = request.data.get("top_n", 5)
+        resumes = load_resumes()
         recommendations = recommend_resumes(job_desc, resumes, top_n)
-        return render(request, "results.html", {"recommendations": recommendations, "job_desc": job_desc})
-    return render(request, "home.html")
+        serializer = ResumeSerializer(recommendations, many=True)
+        return Response(serializer.data)
