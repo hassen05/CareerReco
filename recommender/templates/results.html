@@ -1,36 +1,30 @@
-{% extends 'base.html' %}
-
+{% extends "base.html" %}
 {% block content %}
-  <!-- Resume Recommendations -->
-  {% if recommendations %}
-  <h2 class="mb-4 text-center text-primary">Top Matches</h2>
-  <div class="row">
-    {% for resume in recommendations %}
-      <div class="col-md-4 mb-4">
-        <div class="resume-card card h-100 shadow">
+  <h2>Results for "{{ job_desc }}"</h2>
+  <div class="row mt-4">
+    {% for rec in recommendations %}
+      <div class="col-md-6 mb-4">
+        <div class="card shadow">
           <div class="card-body">
-            <h5 class="card-title text-primary">{{ resume.name }}</h5>
-            <p class="card-subtitle mb-2 text-muted">{{ resume.experience }} years of experience</p>
+            <h5 class="card-title">{{ rec.resume.name }}</h5>
+            <p class="text-muted">Score: {{ rec.score|floatformat:2 }}</p>
             <div class="mb-2">
-              <span class="badge bg-secondary">Skills:</span>
-              {{ resume.skills }}
+              <strong>Skills:</strong> {{ rec.resume.skills|join:", " }}
             </div>
             <div class="mb-2">
-              <span class="badge bg-info">Education:</span>
-              {{ resume.education }}
+              <strong>Experience:</strong> 
+              {% for job in rec.resume.experience %}
+                {{ job.years }} years as {{ job.position }} at {{ job.company }}{% if not forloop.last %}, {% endif %}
+              {% endfor %}
             </div>
-            <div>
-              <span class="badge bg-success">Certifications:</span>
-              {{ resume.certifications }}
+            <div class="mb-2">
+              <strong>Certifications:</strong> {{ rec.resume.certifications|join:", " }}
             </div>
           </div>
         </div>
       </div>
+    {% empty %}
+      <div class="alert alert-warning">No matches found!</div>
     {% endfor %}
   </div>
-  {% else %}
-    <div class="alert alert-warning" role="alert">
-      No matching resumes found.
-    </div>
-  {% endif %}
 {% endblock %}

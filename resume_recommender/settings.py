@@ -55,7 +55,7 @@ ROOT_URLCONF = "resume_recommender.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        'DIRS': [BASE_DIR / 'recommender/templates'],  
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

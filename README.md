@@ -21,11 +21,13 @@ A Django-based web application that recommends the best resumes for a given job 
     pip install -r requirements.txt
 
 4. Set up the database:
+    python manage.py makemigrations recommender
     python manage.py migrate
 5. Import sample resumes:
     python manage.py shell
 --- from recommender.import_resumes import import_data
 --- import_data()
+--- exit()
 
 6. Run the server:
     python manage.py runserver

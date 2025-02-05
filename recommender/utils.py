@@ -1,50 +1,49 @@
-from sentence_transformers import SentenceTransformer
+import json
 import numpy as np
+import spacy
+from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Load the embedding model
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# Load models
+nlp = spacy.load("en_core_web_sm")
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+def load_resumes(json_path="updated_cs_resumes.json"):
+    """Load resumes from JSON file."""
+    try:
+        with open(json_path) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
+
+def extract_required_experience(job_desc):
+    """Extract minimum experience requirement from job description."""
+    doc = nlp(job_desc)
+    min_exp = 0
+    for token in doc:
+        if token.like_num and ("year" in token.text.lower() or "yr" in token.text.lower()):
+            min_exp = int(token.text)
+    return min_exp
 
 def recommend_resumes(job_desc, resumes, top_n=5):
-    """
-    Recommends top N resumes based on cosine similarity between job description and resumes.
-
-    Args:
-        job_desc (str): Job description text.
-        resumes (list): List of Resume objects.
-        top_n (int): Number of recommendations to return (default: 5).
-
-    Returns:
-        list: Top N recommended resumes.
-    """
-    # Encode job description
+    """Recommend resumes based on job description."""
+    # Filter by experience
+    min_exp = extract_required_experience(job_desc)
+    filtered = [
+        r for r in resumes 
+        if sum(job["years"] for job in r["experience"]) >= min_exp
+    ]
+    
+    # Generate embeddings
     job_embedding = model.encode([job_desc])
-    
-    # Retrieve and validate resume embeddings
-    valid_resumes = []
     resume_embeddings = []
-    
-    for resume in resumes:
-        if resume.embedding:  # Skip resumes with missing embeddings
-            embedding = np.frombuffer(resume.embedding, dtype=np.float32)
-            if embedding.shape[0] == 384:  # all-MiniLM-L6-v2 outputs 384-dim embeddings
-                valid_resumes.append(resume)
-                resume_embeddings.append(embedding)
-    
-    # Check if any valid resumes exist
-    if not valid_resumes:
-        return []
-    
-    # Convert to numpy array with consistent shape
-    resume_embeddings = np.array(resume_embeddings)
+    for resume in filtered:
+        text = f"{' '.join(resume['skills'])} {resume['education']} {' '.join(resume['certifications'])}"
+        embedding = model.encode(text)
+        resume_embeddings.append(embedding)
     
     # Compute similarity
-    similarity_scores = cosine_similarity(job_embedding, resume_embeddings).flatten()
+    similarities = cosine_similarity(job_embedding, resume_embeddings).flatten()
+    scored = sorted(zip(filtered, similarities), key=lambda x: x[1], reverse=True)
     
-    # Sort and return top N resumes
-    scored_resumes = sorted(
-        zip(valid_resumes, similarity_scores),
-        key=lambda x: x[1],
-        reverse=True
-    )
-    return [resume for resume, score in scored_resumes[:top_n]]
+    return [{"resume": r, "score": s} for r, s in scored[:top_n]]
