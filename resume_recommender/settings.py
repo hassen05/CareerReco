@@ -53,7 +53,7 @@ MIDDLEWARE = [
      'corsheaders.middleware.CorsMiddleware',
 ]
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React dev server
+    "http://localhost:3001",  # React dev server
 ]
 ROOT_URLCONF = "resume_recommender.urls"
 
