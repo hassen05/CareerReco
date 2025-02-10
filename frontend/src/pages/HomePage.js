@@ -94,7 +94,7 @@ function HomePage() {
                   px: 6,
                   py: 2,
                   fontSize: '1.2rem',
-                  background: `linear-gradient(45deg, #7C4DFF 30%, #00E5FF 90%)`,
+                  background: `linear-gradient(45deg,rgb(141, 5, 175) 30%, #00E5FF 90%)`,
                 }}
               >
                 Start Matching →
