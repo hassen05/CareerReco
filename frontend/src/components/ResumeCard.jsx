@@ -1,20 +1,25 @@
 import React from 'react';
 import { Card, CardContent, Typography, Chip, Stack, Divider, Box, Avatar } from '@mui/material';
 import { motion } from 'framer-motion';
-import { styled } from '@mui/system';
-import { alpha } from '@mui/system';
+import { styled, alpha } from '@mui/system';
 
 // Styled Components
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: '12px',
-  boxShadow: theme.shadows[10],
-  backgroundColor: theme.palette.background.paper, // Set card's background color to match the theme
+  boxShadow: theme.shadows[5],
   transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
   '&:hover': {
     transform: 'translateY(-5px)',
-    boxShadow: theme.shadows[15],
+    boxShadow: theme.shadows[10],
   },
-  padding: '20px', // Added padding to the card for better content spacing
+  height: '100%', // Ensure the card takes full height
+  display: 'flex',
+  flexDirection: 'column',
+}));
+
+const CardContentWrapper = styled(CardContent)(({ theme }) => ({
+  flex: 1, // Ensure content takes up remaining space
+  padding: theme.spacing(3),
 }));
 
 const ScoreChip = styled(Chip)(({ theme }) => ({
@@ -36,16 +41,17 @@ const ResumeCard = ({ resume }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
+      style={{ height: '100%' }} // Ensure motion.div takes full height
     >
       <StyledCard>
-        <CardContent>
+        <CardContentWrapper>
           {/* Name and Score */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
                 {resume.name.charAt(0).toUpperCase()}
               </Avatar>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
                 {resume.name}
               </Typography>
             </Box>
@@ -62,7 +68,7 @@ const ResumeCard = ({ resume }) => {
           <Divider sx={{ my: 2 }} />
 
           {/* Education */}
-          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
             🎓 Education
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -70,7 +76,7 @@ const ResumeCard = ({ resume }) => {
           </Typography>
 
           {/* Skills */}
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold', color: 'text.primary' }}>
+          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
             🛠️ Skills
           </Typography>
           <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
@@ -80,7 +86,7 @@ const ResumeCard = ({ resume }) => {
           </Stack>
 
           {/* Experience */}
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold', color: 'text.primary' }}>
+          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
             💼 Experience
           </Typography>
           <Stack spacing={1} sx={{ pl: 2 }}>
@@ -92,7 +98,7 @@ const ResumeCard = ({ resume }) => {
           </Stack>
 
           {/* Languages */}
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold', color: 'text.primary' }}>
+          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
             🌍 Languages
           </Typography>
           <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
@@ -102,7 +108,7 @@ const ResumeCard = ({ resume }) => {
           </Stack>
 
           {/* Certifications */}
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold', color: 'text.primary' }}>
+          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
             🏅 Certifications
           </Typography>
           <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
@@ -110,7 +116,7 @@ const ResumeCard = ({ resume }) => {
               <SkillChip key={index} label={certification} />
             ))}
           </Stack>
-        </CardContent>
+        </CardContentWrapper>
       </StyledCard>
     </motion.div>
   );

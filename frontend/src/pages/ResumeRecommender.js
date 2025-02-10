@@ -5,6 +5,7 @@ import ResumeCard from '../components/ResumeCard';
 import { Container, Typography, CircularProgress, Alert, Snackbar, Grid, Box } from '@mui/material';
 import { Fade } from '@mui/material';
 
+
 function ResumeRecommender() {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -68,7 +69,7 @@ function ResumeRecommender() {
             {recommendations.map((resume) => (
               <Grid item xs={12} sm={6} md={4} key={resume.id}>
                 <Fade in timeout={500}>
-                  <Box sx={{ boxShadow: 2, borderRadius: 2, backgroundColor: 'white' }}>
+                  <Box sx={{ boxShadow: 2, borderRadius: 2, backgroundColor: 'transparent' }}>
                     <ResumeCard resume={resume} />
                   </Box>
                 </Fade>
