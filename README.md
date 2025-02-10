@@ -19,6 +19,7 @@ A web application that recommends the best resumes for a given job description u
 
 3. Install dependencies:
     pip install -r requirements.txt
+    python -m spacy download fr_core_news_sm
 
 4. Set up the database:
     python manage.py makemigrations recommender

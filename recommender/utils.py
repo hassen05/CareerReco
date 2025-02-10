@@ -1,104 +1,64 @@
-# utils.py
 import json
 import numpy as np
+import spacy
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
+from collections import defaultdict
+import langdetect  # Detects language
 
-# Load sentence transformer model
-model = SentenceTransformer("all-MiniLM-L6-v2")
+# Load NLP models
+nlp_en = spacy.load("en_core_web_sm")  # English
+nlp_fr = spacy.load("fr_core_news_sm")  # French
 
-def load_resumes(json_path="merged_resumes.json"):
-    """Load resumes from JSON file."""
+# Load multilingual sentence transformer
+model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")  
+
+# Configuration - Adjust these weights based on importance
+WEIGHTS = {
+    'similarity': 0.6,
+    'experience': 0.2,
+    'keywords': 0.15,
+    'education': 0.05
+}
+
+def detect_language(text):
+    """Detects if text is in French or English"""
     try:
-        with open(json_path) as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return []
+        lang = langdetect.detect(text)
+        return "fr" if lang == "fr" else "en"
+    except:
+        return "en"  # Default to English if detection fails
 
-def generate_embedding_text(resume):
-    """
-    Generates a consolidated text string from resume data for embedding generation.
-    Includes skills, experience, education, and certifications.
-    """
-    components = []
-    
-    # Skills
-    if resume.get("skills"):
-        components.append(f"Skills: {', '.join(resume['skills'])}")
-    
-    # Experience
-    if resume.get("experience"):
-        exp_text = " ".join(
-            f"{job.get('position', '')} at {job.get('company', '')} "
-            f"for {job.get('years', 0)} years" 
-            for job in resume["experience"]
-        )
-        components.append(f"Experience: {exp_text}")
-    
-    # Education
-    if resume.get("education"):
-        components.append(f"Education: {resume['education']}")
-    
-    # Certifications
-    if resume.get("certifications"):
-        components.append(f"Certifications: {', '.join(resume['certifications'])}")
-    
-    return " ".join(components)
+def extract_job_requirements(job_desc):
+    """Extract key requirements from job description using NLP"""
+    lang = detect_language(job_desc)
+    nlp = nlp_fr if lang == "fr" else nlp_en  # Select language model
 
-def recommend_resumes(job_desc, resumes, top_n=5):
-    """
-    Recommends top resumes based on holistic similarity between job description 
-    and resume content (skills, experience, education, certifications).
-    
-    Returns:
-        List of resumes with similarity scores, sorted by relevance.
-    """
-    # Encode job description
-    job_embedding = model.encode([job_desc])
-    if isinstance(top_n, str):
-        top_n = int(top_n)
-    # Process all resumes
-    valid_resumes = []
-    resume_embeddings = []
-    
-    for resume in resumes:
-        # Handle existing embeddings
-        if "embedding" in resume:
-            try:
-                embedding = np.frombuffer(resume["embedding"], dtype=np.float32)
-                if embedding.shape[0] == 384:  # Validate embedding dimensions
-                    valid_resumes.append(resume)
-                    resume_embeddings.append(embedding)
-                    continue
-            except Exception as e:
-                pass
-        
-        # Generate new embedding if missing or invalid
-        embedding_text = generate_embedding_text(resume)
-        embedding = model.encode(embedding_text)
-        resume["embedding"] = np.asarray(embedding).astype(np.float32).tobytes()
-        valid_resumes.append(resume)
-        resume_embeddings.append(embedding)
-    
-    if not valid_resumes:
-        return []
-    
-    # Calculate similarity scores
-    similarity_scores = cosine_similarity(job_embedding, resume_embeddings).flatten()
-    
-    # Combine resumes with scores and sort
-    scored_resumes = sorted(
-        zip(valid_resumes, similarity_scores),
-        key=lambda x: x[1],
-        reverse=True
-    )
-    
-    # Format output
-    return [
-        {
-            **resume,
-            "score": float(score),
-            "embedding": None  # Remove binary data from output
-        }
-        for resume, score in scored_resumes[:top_n]
-    ]
+    doc = nlp(job_desc)
+    requirements = {
+        'keywords': [],
+        'experience': 0,
+        'education': '',
+        'certifications': []
+    }
+
+    # Extract experience
+    for ent in doc.ents:
+        if ent.label_ == 'DATE' and ('year' in ent.text or 'an' in ent.text or 'année' in ent.text):
+            requirements['experience'] = max(int(t.text) for t in ent if t.like_num)
+
+    # Extract education and certifications
+    for chunk in doc.noun_chunks:
+        if any(keyword in chunk.text.lower() for keyword in ["degree", "bachelor", "diplôme", "baccalauréat"]):
+            requirements['education'] = chunk.text
+        if any(keyword in chunk.text.lower() for keyword in ["certified", "certifié", "certification"]):
+            requirements['certifications'].append(chunk.text)
+
+    # Extract keywords using TF-IDF
+    stop_words = 'french' if lang == "fr" else 'english'
+    tfidf = TfidfVectorizer(stop_words=stop_words, max_features=20)
+    tfidf.fit([job_desc])
+    requirements['keywords'] = tfidf.get_feature_names_out()
+
+    return requirements
