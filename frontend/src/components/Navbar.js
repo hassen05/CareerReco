@@ -1,63 +1,92 @@
-import React from 'react';
+// components/Navbar.js
+import React, { useState, useEffect } from 'react';
+import { AppBar, Toolbar, Typography, Box, Button } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
-import { AppBar, Toolbar, MenuItem, Box, Typography } from '@mui/material';
-import { styled, alpha } from '@mui/material/styles';
-import HomeIcon from '@mui/icons-material/Home';
-import UploadIcon from '@mui/icons-material/Upload';
-import RecommendIcon from '@mui/icons-material/ThumbUp';
-import LoginIcon from '@mui/icons-material/Login';
+import { motion } from 'framer-motion';
 
-const StyledAppBar = styled(AppBar)(({ theme }) => ({
-  background: alpha(theme.palette.background.paper, 0.8),
-  backdropFilter: 'blur(10px)',
-  borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-}));
-
-const NavButton = styled(MenuItem)(({ theme }) => ({
-  borderRadius: '8px',
-  margin: '0 8px',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    background: alpha(theme.palette.primary.main, 0.1),
-    transform: 'translateY(-2px)',
-  },
-}));
-
-function Navbar() {
+const Navbar = () => {
   const location = useLocation();
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  const links = [
-    { path: '/', label: 'Home', icon: <HomeIcon /> },
-    { path: '/recommender', label: 'Recommender', icon: <RecommendIcon /> },
-    { path: '/upload', label: 'Upload', icon: <UploadIcon /> },
-    { path: '/login', label: 'Login', icon: <LoginIcon /> },
-  ];
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <StyledAppBar elevation={0}>
-      <Toolbar>
-        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 800, mr: 4 }}>
-            🔍 Recruiter.ai
-          </Typography>
-          {links.map((link) => (
-            <NavButton
-              key={link.path}
-              component={Link}
-              to={link.path}
-              selected={location.pathname === link.path}
-              sx={{ color: location.pathname === link.path ? 'primary.main' : 'text.primary' }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {link.icon}
-                {link.label}
-              </Box>
-            </NavButton>
-          ))}
+    <AppBar 
+      position="fixed" 
+      sx={{ 
+        backgroundColor: isScrolled || location.pathname !== '/' ? '#FFB6C1' : 'transparent',
+        boxShadow: 'none',
+        transition: 'all 0.3s ease',
+        backdropFilter: location.pathname === '/' ? 'none' : 'blur(8px)'
+      }}
+    >
+      <Toolbar sx={{ py: 2 }}>
+        <Typography
+          variant="h4"
+          component={motion.div}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          sx={{
+            flexGrow: 1,
+            fontWeight: 700,
+            color: location.pathname === '/' && !isScrolled ? 'white' : '#FFFFFF',
+          }}
+        >
+          ResumeRec
+        </Typography>
+
+        <Box sx={{ display: 'flex', gap: 4 }}>
+          <Button
+            component={Link}
+            to="/"
+            sx={{
+              color: location.pathname === '/' && !isScrolled ? 'white' : '#FFFFFF',
+              '&:hover': { color: 'primary.dark' }
+            }}
+          >
+            Home
+          </Button>
+          <Button
+            component={Link}
+            to="/recommend"
+            sx={{
+              color: location.pathname === '/' && !isScrolled ? 'white' : '#FFFFFF',
+              '&:hover': { color: 'primary.dark' }
+            }}
+          >
+            Recommend
+          </Button>
+          <Button
+            component={Link}
+            to="/upload"
+            sx={{
+              color: location.pathname === '/' && !isScrolled ? 'white' : '#FFFFFF',
+              '&:hover': { color: 'primary.dark' }
+            }}
+          >
+            Upload
+          </Button>
+          <Button
+            component={Link}
+            to="/login"
+            sx={{
+              color: location.pathname === '/' && !isScrolled ? 'white' : '#FFFFFF',
+              '&:hover': { color: 'primary.dark' }
+            }}
+          >
+            Login
+          </Button>
+
         </Box>
       </Toolbar>
-    </StyledAppBar>
+    </AppBar>
   );
-}
-
+};
 export default Navbar;

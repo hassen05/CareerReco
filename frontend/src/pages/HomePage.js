@@ -1,136 +1,174 @@
+// pages/HomePage.js
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Container, Box, Typography, Button, Grid, styled } from '@mui/material';
+import { Container, Box, Typography, Grid, Button } from '@mui/material';
 import { motion } from 'framer-motion';
-import Particles from 'react-tsparticles';
-import { loadFull } from 'tsparticles';
+import HomeHero from '../components/HomeHero';
 
-const HeroSection = styled(Box)(({ theme }) => ({
-  position: 'relative',
-  height: '100vh',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  textAlign: 'center',
-  overflow: 'hidden',
-}));
-
-const FeatureCard = styled(Box)(({ theme }) => ({
-  background: theme.palette.background.paper,
-  padding: theme.spacing(4),
-  borderRadius: '16px',
-  boxShadow: theme.shadows[3],
-  textAlign: 'center',
-  transition: 'transform 0.3s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-10px)',
-  },
-}));
-
-const ParticlesBackground = () => {
-  const particlesInit = async (engine) => {
-    if (engine && typeof engine.addShape === "function") {
-      await loadFull(engine);
-    }
-  };
-
-  return (
-    <Particles
-      init={particlesInit}
-      options={{
-        particles: {
-          number: { value: 50 },
-          color: { value: "#7C4DFF" },
-          opacity: { value: 0.5 },
-          size: { value: 3 },
-          move: { enable: true, speed: 1 },
-        },
-      }}
-      style={{ position: "absolute", top: 0, left: 0 }}
-    />
-  );
-};
-
-
-function HomePage() {
-  const navigate = useNavigate();
-
+const HomePage = () => {
   const features = [
     {
-      title: 'Smart Recommendations',
-      description: 'Get the best resumes matched to your job description using advanced AI.',
-      icon: '📊',
+      title: "AI-Powered Matching",
+      description: "Deep learning algorithms that understand context and skills",
+      icon: "🤖"
     },
     {
-      title: 'Easy to Use',
-      description: 'Intuitive interface designed for recruiters and hiring managers.',
-      icon: '🖥️',
+      title: "Smart Filters",
+      description: "Dynamic filtering based on your specific needs",
+      icon: "🎯"
     },
     {
-      title: 'Customizable Filters',
-      description: 'Filter resumes by experience, skills, education, and more.',
-      icon: '🔍',
-    },
+      title: "Real-time Analysis",
+      description: "Instant insights and candidate comparisons",
+      icon: "⚡"
+    }
   ];
 
   return (
-    <Box>
-      <HeroSection>
-        <ParticlesBackground />
-        <Container>
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.8 }}>
-            <Typography variant="h1" gutterBottom>
-              Next-Gen Talent Acquisition
-            </Typography>
-            <Typography variant="h4" sx={{ mb: 4 }}>
-              AI-powered resume matching with <Box component="span" color="primary.main">95% accuracy</Box>
-            </Typography>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="contained"
-                size="large"
-                onClick={() => navigate('/recommender')}
-                sx={{
-                  px: 6,
-                  py: 2,
-                  fontSize: '1.2rem',
-                  background: `linear-gradient(45deg,rgb(141, 5, 175) 30%, #00E5FF 90%)`,
-                }}
-              >
-                Start Matching →
-              </Button>
-            </motion.div>
-          </motion.div>
-        </Container>
-      </HeroSection>
-
-      <Box sx={{ py: 10, position: 'relative' }}>
-        <Container>
-          <Grid container spacing={6}>
+    <Box sx={{ overflow: 'hidden' }}>
+      <HomeHero />
+      
+      {/* Features Section */}
+      <Box sx={{ py: 8, bgcolor: 'background.paper' }}>
+        <Container maxWidth="lg">
+          <Typography variant="h3" sx={{ 
+            textAlign: 'center', 
+            mb: 6,
+            fontWeight: 700,
+            color: 'primary.main'
+          }}>
+            Why Choose Us?
+          </Typography>
+          
+          <Grid container spacing={4}>
             {features.map((feature, index) => (
               <Grid item xs={12} md={4} key={index}>
                 <motion.div
                   initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.2 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-100px" }}
                 >
-                  <FeatureCard>
-                    <Typography variant="h3" sx={{ mb: 2 }}>
+                  <Box sx={{
+                    p: 4,
+                    height: '100%',
+                    borderRadius: 4,
+                    bgcolor: 'background.default',
+                    transition: 'transform 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-8px)'
+                    }
+                  }}>
+                    <Typography variant="h2" sx={{ mb: 2 }}>
                       {feature.icon}
                     </Typography>
-                    <Typography variant="h5" sx={{ mb: 2 }}>
+                    <Typography variant="h5" gutterBottom>
                       {feature.title}
                     </Typography>
-                    <Typography variant="body1">{feature.description}</Typography>
-                  </FeatureCard>
+                    <Typography variant="body1" color="text.secondary">
+                      {feature.description}
+                    </Typography>
+                  </Box>
                 </motion.div>
               </Grid>
             ))}
           </Grid>
         </Container>
       </Box>
+
+      {/* Demo Section */}
+      <Box sx={{ py: 8, background: 'linear-gradient(45deg, #FFB6C1 0%, #FF8FA3 100%)' }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={6} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+              >
+                <Typography variant="h3" sx={{ 
+                  mb: 3, 
+                  color: 'white',
+                  fontWeight: 700
+                }}>
+                  See It in Action
+                </Typography>
+                <Typography variant="h6" sx={{ 
+                  mb: 4,
+                  color: 'rgba(255,255,255,0.9)' 
+                }}>
+                  Watch how ResumeRec transforms your hiring process
+                </Typography>
+              </motion.div>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+              >
+                <Box sx={{
+                  borderRadius: 4,
+                  overflow: 'hidden',
+                  boxShadow: 6,
+                  position: 'relative',
+                  pt: '56.25%' // 16:9 aspect ratio
+                }}>
+                  {/* Add your video embed here */}
+                  <Box sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    bgcolor: 'rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white'
+                  }}>
+                    <Typography variant="h4">Video Demo Coming Soon!</Typography>
+                  </Box>
+                </Box>
+              </motion.div>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* CTA Section */}
+      <Box sx={{ py: 8 }}>
+        <Container maxWidth="lg">
+          <Box sx={{ 
+            textAlign: 'center', 
+            p: 8, 
+            borderRadius: 4,
+            bgcolor: 'background.paper',
+            boxShadow: 3
+          }}>
+            <Typography variant="h3" sx={{ 
+              mb: 3,
+              fontWeight: 700,
+              color: 'primary.main'
+            }}>
+              Ready to Transform Your Hiring?
+            </Typography>
+            <Typography variant="h6" sx={{ mb: 4, color: 'text.secondary' }}>
+              Join hundreds of companies already using ResumeRec
+            </Typography>
+            <Button 
+              variant="contained" 
+              size="large"
+              sx={{
+                px: 6,
+                py: 2,
+                fontSize: '1.2rem',
+                bgcolor: 'primary.main',
+                '&:hover': { bgcolor: 'primary.dark' }
+              }}
+            >
+              Get Started Free
+            </Button>
+          </Box>
+        </Container>
+      </Box>
     </Box>
   );
-}
-
+};
 export default HomePage;

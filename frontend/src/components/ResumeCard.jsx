@@ -1,125 +1,156 @@
+// components/ResumeCard.js
 import React from 'react';
-import { Card, CardContent, Typography, Chip, Stack, Divider, Box, Avatar } from '@mui/material';
+import { 
+  Card, 
+  CardContent, 
+  Typography, 
+  Chip, 
+  Stack, 
+  Divider, 
+  Box, 
+  Avatar,
+  useTheme
+} from '@mui/material';
 import { motion } from 'framer-motion';
 import { styled, alpha } from '@mui/system';
 
-// Styled Components
 const StyledCard = styled(Card)(({ theme }) => ({
-  borderRadius: '12px',
-  boxShadow: theme.shadows[5],
-  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: theme.shadows[10],
-  },
-  height: '100%', // Ensure the card takes full height
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: theme.shadows[4],
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  background: alpha(theme.palette.background.paper, 0.9),
+  backdropFilter: 'blur(8px)',
+  height: '100%',
   display: 'flex',
   flexDirection: 'column',
+  '&:hover': {
+    transform: 'translateY(-8px)',
+    boxShadow: theme.shadows[8],
+  },
 }));
 
-const CardContentWrapper = styled(CardContent)(({ theme }) => ({
-  flex: 1, // Ensure content takes up remaining space
+const CardHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
   padding: theme.spacing(3),
+  paddingBottom: 0,
 }));
 
-const ScoreChip = styled(Chip)(({ theme }) => ({
-  backgroundColor: theme.palette.primary.main,
+const ScoreBadge = styled(Chip)(({ theme }) => ({
+  background: `linear-gradient(45deg, ${theme.palette.secondary.main} 0%, ${theme.palette.primary.main} 100%)`,
   color: theme.palette.common.white,
-  fontWeight: 'bold',
+  fontWeight: 700,
   fontSize: '0.9rem',
+  padding: theme.spacing(1),
 }));
 
-const SkillChip = styled(Chip)(({ theme }) => ({
-  backgroundColor: alpha(theme.palette.primary.main, 0.1),
-  color: theme.palette.primary.main,
-  fontWeight: '500',
+const DetailChip = styled(Chip)(({ theme }) => ({
+  background: alpha(theme.palette.primary.main, 0.08),
+  color: theme.palette.text.primary,
+  fontWeight: 500,
+  padding: theme.spacing(0.5),
 }));
 
 const ResumeCard = ({ resume }) => {
+  const theme = useTheme();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      style={{ height: '100%' }} // Ensure motion.div takes full height
+      transition={{ duration: 0.4 }}
+      style={{ height: '100%' }}
     >
       <StyledCard>
-        <CardContentWrapper>
-          {/* Name and Score */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <CardContent sx={{ flex: 1 }}>
+          <CardHeader>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
+              <Avatar sx={{ 
+                bgcolor: alpha(theme.palette.primary.main, 0.2),
+                color: 'primary.main',
+                width: 56, 
+                height: 56,
+                fontSize: '1.5rem',
+                fontWeight: 700 
+              }}>
                 {resume.name.charAt(0).toUpperCase()}
               </Avatar>
-              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
                 {resume.name}
               </Typography>
             </Box>
-            <ScoreChip label={`Score: ${resume.score.toFixed(2)}`} />
-          </Box>
+            <ScoreBadge label={`${resume.score.toFixed(1)} Match`} />
+          </CardHeader>
 
-          {/* Personal Info */}
-          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-            <Typography variant="body2" color="text.secondary">📧 {resume.email}</Typography>
-            <Typography variant="body2" color="text.secondary">📞 {resume.phone}</Typography>
-            <Typography variant="body2" color="text.secondary">🎂 {resume.age}</Typography>
+          <Stack spacing={2} sx={{ p: 3 }}>
+            <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.1) }} />
+
+            <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 1.5 }}>
+              <DetailChip label={`📧 ${resume.email}`} />
+              <DetailChip label={`📱 ${resume.phone}`} />
+              <DetailChip label={`🎂 ${resume.age} years`} />
+            </Stack>
+
+            <Section title="🎓 Education" content={resume.education} />
+            
+            <Section title="🛠️ Core Skills">
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                {resume.skills.map((skill, index) => (
+                  <DetailChip key={index} label={skill} />
+                ))}
+              </Stack>
+            </Section>
+
+            <Section title="💼 Professional Experience">
+              {resume.experience.map((job, index) => (
+                <Typography key={index} variant="body2" sx={{ color: 'text.secondary' }}>
+                  <strong>{job.years}y</strong> as {job.position} @ {job.company}
+                </Typography>
+              ))}
+            </Section>
+
+            <Section title="🌍 Languages">
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                {resume.languages.map((lang, index) => (
+                  <DetailChip key={index} label={lang} />
+                ))}
+              </Stack>
+            </Section>
+
+            <Section title="🏆 Certifications">
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                {resume.certifications.map((cert, index) => (
+                  <DetailChip key={index} label={cert} />
+                ))}
+              </Stack>
+            </Section>
           </Stack>
-
-          <Divider sx={{ my: 2 }} />
-
-          {/* Education */}
-          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-            🎓 Education
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {resume.education}
-          </Typography>
-
-          {/* Skills */}
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
-            🛠️ Skills
-          </Typography>
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-            {resume.skills.map((skill, index) => (
-              <SkillChip key={index} label={skill} />
-            ))}
-          </Stack>
-
-          {/* Experience */}
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
-            💼 Experience
-          </Typography>
-          <Stack spacing={1} sx={{ pl: 2 }}>
-            {resume.experience.map((job, index) => (
-              <Typography key={index} variant="body2" color="text.secondary">
-                {job.years} years as <strong>{job.position}</strong> at {job.company}
-              </Typography>
-            ))}
-          </Stack>
-
-          {/* Languages */}
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
-            🌍 Languages
-          </Typography>
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-            {resume.languages.map((language, index) => (
-              <SkillChip key={index} label={language} />
-            ))}
-          </Stack>
-
-          {/* Certifications */}
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
-            🏅 Certifications
-          </Typography>
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-            {resume.certifications.map((certification, index) => (
-              <SkillChip key={index} label={certification} />
-            ))}
-          </Stack>
-        </CardContentWrapper>
+        </CardContent>
       </StyledCard>
     </motion.div>
   );
 };
+
+const Section = ({ title, content, children }) => (
+  <Box>
+    <Typography variant="subtitle1" sx={{ 
+      fontWeight: 600, 
+      mb: 1.5,
+      color: 'primary.main'
+    }}>
+      {title}
+    </Typography>
+    {content && (
+      <Typography variant="body2" sx={{ 
+        color: 'text.secondary',
+        lineHeight: 1.6 
+      }}>
+        {content}
+      </Typography>
+    )}
+    {children}
+  </Box>
+);
 
 export default ResumeCard;

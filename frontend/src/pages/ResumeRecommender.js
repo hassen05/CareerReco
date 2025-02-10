@@ -1,15 +1,33 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { 
+  Container, 
+  Typography, 
+  CircularProgress, 
+  Alert, 
+  Snackbar, 
+  Grid, 
+  Box,
+  Fab,
+  useScrollTrigger,
+  Zoom,
+  Fade
+} from '@mui/material';
+import { KeyboardArrowUp } from '@mui/icons-material'; // Import scroll-to-top icon
 import SearchForm from '../components/SearchForm';
 import ResumeCard from '../components/ResumeCard';
-import { Container, Typography, CircularProgress, Alert, Snackbar, Grid, Box } from '@mui/material';
-import { Fade } from '@mui/material';
-
+import PageHero from '../components/PageHero';
 
 function ResumeRecommender() {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Scroll-to-top functionality
+  const trigger = useScrollTrigger({
+    disableHysteresis: true,
+    threshold: 100,
+  });
 
   const handleSearch = async ({ jobDesc, topN }) => {
     setLoading(true);
@@ -33,58 +51,144 @@ function ResumeRecommender() {
     setError(null);
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h3" sx={{ mb: 3, fontWeight: 'bold', textAlign: 'center' }}>
-        Resume Recommender
-      </Typography>
+    <Box>
+      {/* Hero Section */}
+      <PageHero 
+        title="Smart Recommendations" 
+        subtitle="Find your perfect candidates with AI-powered matching"
+        image="/recommend-header.jpeg"
+        gradientStart="rgba(255, 182, 193, 0.9)"
+        gradientEnd="rgba(255, 143, 163, 0.7)"
+      />
 
-      <SearchForm onSubmit={handleSearch} />
+      {/* Main Content */}
+      <Container maxWidth="lg" sx={{ py: 6 }}>
+        {/* Search Form */}
+        <Box sx={{ mb: 6 }}>
+          <SearchForm onSubmit={handleSearch} />
+        </Box>
 
-      {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>
-          <CircularProgress sx={{ color: '#5e35b1' }} />
-        </div>
-      )}
+        {/* Loading State */}
+        {loading && (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            minHeight: 200,
+            flexDirection: 'column',
+            gap: 2
+          }}>
+            <CircularProgress sx={{ color: 'primary.main' }} />
+            <Typography variant="body1" color="text.secondary">
+              Analyzing resumes with AI...
+            </Typography>
+          </Box>
+        )}
 
-      {error && (
-        <Snackbar
-          open={!!error}
-          autoHideDuration={6000}
-          onClose={handleCloseError}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        {/* Error State */}
+        {error && (
+          <Snackbar
+            open={!!error}
+            autoHideDuration={6000}
+            onClose={handleCloseError}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          >
+            <Alert 
+              onClose={handleCloseError} 
+              severity="error" 
+              sx={{ 
+                width: '100%', 
+                borderRadius: 2,
+                boxShadow: 3,
+              }}
+            >
+              {error}
+            </Alert>
+          </Snackbar>
+        )}
+
+        {/* Results Section */}
+        {!loading && recommendations.length > 0 && (
+          <Box>
+            <Typography variant="h4" sx={{ 
+              mb: 6,
+              fontWeight: 700,
+              color: 'primary.main',
+              textAlign: 'center'
+            }}>
+              Top Matches
+            </Typography>
+            <Grid container spacing={4}>
+              {recommendations.map((resume) => (
+                <Grid item xs={12} sm={6} md={4} key={resume.id}>
+                  <Fade in timeout={500}>
+                    <Box sx={{ 
+                      height: '100%',
+                      transition: 'transform 0.3s ease',
+                      '&:hover': { transform: 'translateY(-8px)' }
+                    }}>
+                      <ResumeCard resume={resume} />
+                    </Box>
+                  </Fade>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )}
+
+        {/* Empty State */}
+        {!loading && recommendations.length === 0 && !error && (
+          <Box sx={{ 
+            textAlign: 'center', 
+            p: 8, 
+            borderRadius: 4,
+            bgcolor: 'background.paper',
+            boxShadow: 3
+          }}>
+            <Typography variant="h5" sx={{ mb: 2, color: 'text.secondary' }}>
+              🕵️ No matches found yet...
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Try adjusting your search criteria or use broader terms
+            </Typography>
+          </Box>
+        )}
+      </Container>
+
+      {/* Scroll-to-top Button */}
+      <Zoom in={trigger}>
+        <Box
+          onClick={scrollToTop}
+          role="presentation"
+          sx={{
+            position: 'fixed',
+            bottom: 32,
+            right: 32,
+            zIndex: 1000,
+          }}
         >
-          <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%', borderRadius: 2 }}>
-            {error}
-          </Alert>
-        </Snackbar>
-      )}
-
-      {!loading && recommendations.length > 0 && (
-        <div>
-          <Typography variant="h5" sx={{ mt: 4, fontWeight: 'bold' }}>
-            Top Matches
-          </Typography>
-          <Grid container spacing={3} sx={{ mt: 3 }}>
-            {recommendations.map((resume) => (
-              <Grid item xs={12} sm={6} md={4} key={resume.id}>
-                <Fade in timeout={500}>
-                  <Box sx={{ boxShadow: 2, borderRadius: 2, backgroundColor: 'transparent' }}>
-                    <ResumeCard resume={resume} />
-                  </Box>
-                </Fade>
-              </Grid>
-            ))}
-          </Grid>
-        </div>
-      )}
-
-      {!loading && recommendations.length === 0 && !error && (
-        <Typography variant="body1" sx={{ mt: 4, textAlign: 'center' }}>
-          No recommendations found. Try a different search!
-        </Typography>
-      )}
-    </Container>
+          <Fab 
+            color="primary" 
+            size="medium" 
+            aria-label="scroll back to top"
+            sx={{
+              bgcolor: 'primary.main',
+              '&:hover': { bgcolor: 'primary.dark' }
+            }}
+          >
+            <KeyboardArrowUp />
+          </Fab>
+        </Box>
+      </Zoom>
+    </Box>
   );
 }
 
