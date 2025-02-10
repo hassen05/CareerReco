@@ -38,7 +38,7 @@ function Navbar() {
       <Toolbar>
         <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 800, mr: 4 }}>
-            🔍 TalentVision
+            🔍 Recruiter.ai
           </Typography>
           {links.map((link) => (
             <NavButton

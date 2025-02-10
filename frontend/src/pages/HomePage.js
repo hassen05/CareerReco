@@ -29,7 +29,9 @@ const FeatureCard = styled(Box)(({ theme }) => ({
 
 const ParticlesBackground = () => {
   const particlesInit = async (engine) => {
-    await loadFull(engine);
+    if (engine && typeof engine.addShape === "function") {
+      await loadFull(engine);
+    }
   };
 
   return (
@@ -38,16 +40,17 @@ const ParticlesBackground = () => {
       options={{
         particles: {
           number: { value: 50 },
-          color: { value: '#7C4DFF' },
+          color: { value: "#7C4DFF" },
           opacity: { value: 0.5 },
           size: { value: 3 },
           move: { enable: true, speed: 1 },
         },
       }}
-      style={{ position: 'absolute', top: 0, left: 0 }}
+      style={{ position: "absolute", top: 0, left: 0 }}
     />
   );
 };
+
 
 function HomePage() {
   const navigate = useNavigate();
