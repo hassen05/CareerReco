@@ -7,7 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 # Load sentence transformer model
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-def load_resumes(json_path="updated_cs_resumes.json"):
+def load_resumes(json_path="merged_resumes.json"):
     """Load resumes from JSON file."""
     try:
         with open(json_path) as f:
@@ -55,7 +55,8 @@ def recommend_resumes(job_desc, resumes, top_n=5):
     """
     # Encode job description
     job_embedding = model.encode([job_desc])
-    
+    if isinstance(top_n, str):
+        top_n = int(top_n)
     # Process all resumes
     valid_resumes = []
     resume_embeddings = []
