@@ -1,4 +1,3 @@
-// src/components/Header.js
 import React from 'react';
 import { AppBar, Toolbar, Tabs, Tab, Box, Typography } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
@@ -9,7 +8,7 @@ function Header() {
 
   return (
     <Box sx={{ 
-      backgroundImage: `url(${process.env.PUBLIC_URL}/header.jpeg)`,
+      backgroundImage: `url(${process.env.PUBLIC_URL}/header.png)`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       color: 'white',
@@ -22,15 +21,17 @@ function Header() {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          backdropFilter: 'blur(2px)',
-          backgroundColor: 'rgba(0, 0, 0, 0.4)'
+          backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(124, 77, 255, 0.6)' // Light purple with transparency
         }}>
           <Typography 
             variant="h2" 
             sx={{ 
-              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)',
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
               mb: 2,
-              textAlign: 'center'
+              textAlign: 'center',
+              fontWeight: 700,
+              color: 'white'
             }}
           >
             Resume Recommender
@@ -40,7 +41,7 @@ function Header() {
             textColor="inherit"
             sx={{
               '.MuiTabs-indicator': {
-                backgroundColor: 'white',
+                backgroundColor: '#40C4FF', // Light blue indicator
                 height: 3
               }
             }}
@@ -51,7 +52,8 @@ function Header() {
               to="/" 
               sx={{ 
                 fontSize: '1.1rem',
-                '&:hover': { color: 'white !important' } 
+                fontWeight: 500,
+                '&:hover': { color: '#40C4FF !important' } // Light blue on hover
               }}
             />
             <Tab 
@@ -60,7 +62,8 @@ function Header() {
               to="/recommend" 
               sx={{ 
                 fontSize: '1.1rem',
-                '&:hover': { color: 'white !important' } 
+                fontWeight: 500,
+                '&:hover': { color: '#40C4FF !important' } // Light blue on hover
               }}
             />
             <Tab 
@@ -69,7 +72,8 @@ function Header() {
               to="/upload" 
               sx={{ 
                 fontSize: '1.1rem',
-                '&:hover': { color: 'white !important' } 
+                fontWeight: 500,
+                '&:hover': { color: '#40C4FF !important' } // Light blue on hover
               }}
             />
             <Tab 
@@ -78,7 +82,8 @@ function Header() {
               to="/login" 
               sx={{ 
                 fontSize: '1.1rem',
-                '&:hover': { color: 'white !important' } 
+                fontWeight: 500,
+                '&:hover': { color: '#40C4FF !important' } // Light blue on hover
               }}
             />
           </Tabs>
@@ -88,4 +93,4 @@ function Header() {
   );
 }
 
-export default Header; // Ensure this line is present
+export default Header;

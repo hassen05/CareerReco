@@ -12,7 +12,7 @@ const HomeHero = () => {
       alignItems: 'center',
       position: 'relative',
       overflow: 'hidden',
-      background: 'linear-gradient(45deg, rgba(255,182,193,0.9) 0%, rgba(255,143,163,0.9) 100%), url(/header.jpeg)',
+      background: ' url(/header.png)',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       pb: 8

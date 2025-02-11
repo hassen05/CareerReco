@@ -1,4 +1,3 @@
-// pages/HomePage.js
 import React from 'react';
 import { Container, Box, Typography, Grid, Button } from '@mui/material';
 import { motion } from 'framer-motion';
@@ -75,7 +74,7 @@ const HomePage = () => {
       </Box>
 
       {/* Demo Section */}
-      <Box sx={{ py: 8, background: 'linear-gradient(45deg, #FFB6C1 0%, #FF8FA3 100%)' }}>
+      <Box sx={{ py: 8, background: 'linear-gradient(45deg, #553d8e 0%, #9ba2c2 100%)' }}>
         <Container maxWidth="lg">
           <Grid container spacing={6} alignItems="center">
             <Grid item xs={12} md={6}>
@@ -159,8 +158,11 @@ const HomePage = () => {
                 px: 6,
                 py: 2,
                 fontSize: '1.2rem',
-                bgcolor: 'primary.main',
-                '&:hover': { bgcolor: 'primary.dark' }
+                background: 'linear-gradient(45deg, #b69ac1 0%, #c7dde7 100%)',
+                color: 'white',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #553d8e 0%, #9ba2c2 100%)',
+                }
               }}
             >
               Get Started Free

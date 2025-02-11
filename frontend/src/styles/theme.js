@@ -1,25 +1,26 @@
-// theme.js
 import { createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#FFB6C1',       // Soft pink
-      light: '#FFE5E9',      // Very light pink
-      dark: '#FF8FA3',       // Medium pink
-      contrastText: '#FFF',
+      main: '#b69ac1',       // Light purple
+      light: '#c4bbce',      // Lighter purple
+      dark: '#553d8e',       // Darker purple
+      contrastText: '#FFF',  // White text for contrast
     },
     secondary: {
-      main: '#6C5B7B',       // Mauve accent
-      contrastText: '#FFF',
+      main: '#c7dde7',       // Light blue
+      light: '#c8dde9',      // Lighter blue
+      dark: '#9ba2c2',       // Darker blue
+      contrastText: '#FFF',  // White text for contrast
     },
     background: {
-      default: '#FFFFFF',     // Pure white
-      paper: '#FFF5F7',       // Subtle pink
+      default: '#F5F5F5',    // Light gray background
+      paper: '#FFFFFF',      // White for cards/paper
     },
     text: {
-      primary: '#2E2E2E',     // Dark gray
-      secondary: '#5D5D5D',   // Medium gray
+      primary: '#212121',    // Dark gray for primary text
+      secondary: '#757575',  // Medium gray for secondary text
     },
   },
   typography: {
@@ -40,7 +41,7 @@ const theme = createTheme({
     },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 12,        // Rounded corners
   },
   components: {
     MuiButton: {

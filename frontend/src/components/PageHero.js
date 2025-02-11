@@ -9,7 +9,7 @@ const PageHero = ({ title, subtitle, image }) => {
       height: { xs: 300, md: 400 },
       display: 'flex',
       alignItems: 'center',
-      background: `linear-gradient(45deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%), url(${image || '/default-header.jpeg'})`,
+      background: `linear-gradient(45deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%), url(${image || '/default-header.png'})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
     }}>

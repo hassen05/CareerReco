@@ -21,10 +21,9 @@ const Navbar = () => {
     <AppBar 
       position="fixed" 
       sx={{ 
-        backgroundColor: isScrolled || location.pathname !== '/' ? '#FFB6C1' : 'transparent',
+        backgroundColor: isScrolled ? 'rgba(159,158,192,255)' : 'transparent', // Transparent initially, slightly transparent light purple when scrolled
         boxShadow: 'none',
         transition: 'all 0.3s ease',
-        backdropFilter: location.pathname === '/' ? 'none' : 'blur(8px)'
       }}
     >
       <Toolbar sx={{ py: 2 }}>
@@ -36,57 +35,21 @@ const Navbar = () => {
           sx={{
             flexGrow: 1,
             fontWeight: 700,
-            color: location.pathname === '/' && !isScrolled ? 'white' : '#FFFFFF',
+            color: '#FFFFFF',
           }}
         >
           ResumeRec
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 4 }}>
-          <Button
-            component={Link}
-            to="/"
-            sx={{
-              color: location.pathname === '/' && !isScrolled ? 'white' : '#FFFFFF',
-              '&:hover': { color: 'primary.dark' }
-            }}
-          >
-            Home
-          </Button>
-          <Button
-            component={Link}
-            to="/recommend"
-            sx={{
-              color: location.pathname === '/' && !isScrolled ? 'white' : '#FFFFFF',
-              '&:hover': { color: 'primary.dark' }
-            }}
-          >
-            Recommend
-          </Button>
-          <Button
-            component={Link}
-            to="/upload"
-            sx={{
-              color: location.pathname === '/' && !isScrolled ? 'white' : '#FFFFFF',
-              '&:hover': { color: 'primary.dark' }
-            }}
-          >
-            Upload
-          </Button>
-          <Button
-            component={Link}
-            to="/login"
-            sx={{
-              color: location.pathname === '/' && !isScrolled ? 'white' : '#FFFFFF',
-              '&:hover': { color: 'primary.dark' }
-            }}
-          >
-            Login
-          </Button>
-
+          <Button component={Link} to="/" sx={{ color: '#FFFFFF', '&:hover': { color: 'primary.dark' } }}>Home</Button>
+          <Button component={Link} to="/recommend" sx={{ color: '#FFFFFF', '&:hover': { color: 'primary.dark' } }}>Recommend</Button>
+          <Button component={Link} to="/upload" sx={{ color: '#FFFFFF', '&:hover': { color: 'primary.dark' } }}>Upload</Button>
+          <Button component={Link} to="/login" sx={{ color: '#FFFFFF', '&:hover': { color: 'primary.dark' } }}>Login</Button>
         </Box>
       </Toolbar>
     </AppBar>
   );
 };
+
 export default Navbar;

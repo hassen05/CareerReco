@@ -64,7 +64,7 @@ function ResumeRecommender() {
       <PageHero 
         title="Smart Recommendations" 
         subtitle="Find your perfect candidates with AI-powered matching"
-        image="/recommend-header.jpeg"
+        image="/recommend-header.png"
         gradientStart="rgba(255, 182, 193, 0.9)"
         gradientEnd="rgba(255, 143, 163, 0.7)"
       />
