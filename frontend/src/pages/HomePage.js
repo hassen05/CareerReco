@@ -6,7 +6,7 @@ import HomeHero from '../components/HomeHero';
 const HomePage = () => {
   const features = [
     {
-      title: "AI-Powered Matching",
+      title: "AI-Powered Matchinssg",
       description: "Deep learning algorithms that understand context and skills",
       icon: "🤖"
     },
