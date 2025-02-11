@@ -1,8 +1,8 @@
-Django==5.1.5
-djangorestframework==3.15.2
-langdetect==1.0.9
-numpy==2.2.2
-scikit_learn==1.6.1
-sentence_transformers==3.4.1
-spacy==3.8.4
-sdsd
+Django
+djangorestframework
+langdetect
+numpy
+scikit_learn
+sentence_transformers
+spacy
+django-cors-headers

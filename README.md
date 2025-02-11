@@ -18,8 +18,9 @@ A web application that recommends the best resumes for a given job description u
     source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 3. Install dependencies:
+    
     pip install -r requirements.txt
-    python -m spacy download fr_core_news_sm
+    python -m spacy download en_core_news_sm
     npm install @mui/icons-material framer-motion tsparticles react-tsparticles
     npm install react-tsparticles tsparticles-engine tsparticles
 
@@ -40,4 +41,4 @@ A web application that recommends the best resumes for a given job description u
     npm start
 9. Access the application:
 
-    Open your browser and navigate to http://localhost:3000.
+    Open your browser and navigate to http://localhost:3001.
