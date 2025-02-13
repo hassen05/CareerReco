@@ -7,10 +7,10 @@ import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import ResumeRecommender from './pages/ResumeRecommender';
 import UploadPage from './pages/UploadPage';
-import LoginPage from './pages/SubscribePage';
 import Footer from './components/Footer';
 import AboutUs from './pages/AboutUs';
-import SubscribePage from './pages/SubscribePage';
+import Signup from './pages/Signup';
+
 
 function App() {
   return (
@@ -21,9 +21,8 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/recommend" element={<ResumeRecommender />} />
         <Route path="/upload" element={<UploadPage />} />
-        <Route path="/login" element={<LoginPage />} />
         <Route path="/about" element={<AboutUs />} />
-        <Route path="/subscribe" element={<SubscribePage />} />
+        <Route path="/Signup" element={<Signup />} />
       </Routes>
       <Footer />
     </ThemeProvider>
