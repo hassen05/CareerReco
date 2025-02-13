@@ -7,9 +7,11 @@ const HomePage = () => {
   const features = [
     {
       title: "AI-Powered Matching",
+
       description: "Our advanced AI algorithms analyze resumes with 99% accuracy, understanding context, skills, and experience to find your perfect candidates.",
       icon: "🧠",
       gradient: "linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%)"
+
     },
     {
       title: "Smart Filtering System",
