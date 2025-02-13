@@ -60,7 +60,7 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   }
 }));
 
-function SubscribePage() {
+function Signup() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -301,4 +301,4 @@ function SubscribePage() {
   );
 }
 
-export default SubscribePage;
+export default Signup;
