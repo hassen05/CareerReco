@@ -1,28 +1,34 @@
 import React from 'react';
-import { Container, Box, Typography, Grid, Button } from '@mui/material';
+import { Container, Box, Typography, Grid, Button, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import { motion } from 'framer-motion';
 import HomeHero from '../components/HomeHero';
+import { CheckCircleOutline } from '@mui/icons-material';
 
 const HomePage = () => {
   const features = [
     {
-      title: "AI-Powered Matching",
-      description: "Our advanced AI algorithms analyze resumes with 99% accuracy, understanding context, skills, and experience to find your perfect candidates.",
-      icon: "🧠",
-      gradient: "linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%)"
-
+      title: "For Job Seekers",
+      description: "Create your professional profile and let AI match you with the perfect opportunities.",
+      icon: "👤",
+      gradient: "linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%)",
+      items: [
+        "Free resume upload",
+        "AI-powered job matching",
+        "Professional profile creation",
+        "Increased visibility to recruiters"
+      ]
     },
     {
-      title: "Smart Filtering System",
-      description: "Filter candidates by skills, experience, location, and more with our intelligent ranking system that learns from your preferences.",
+      title: "For Recruiters",
+      description: "Access our extensive database of candidates and find the perfect match using AI.",
       icon: "🎯",
-      gradient: "linear-gradient(135deg, #4ECDC4 0%, #556270 100%)"
-    },
-    {
-      title: "Real-time Analytics",
-      description: "Get instant insights with our powerful analytics dashboard. Compare candidates, track hiring metrics, and make data-driven decisions.",
-      icon: "📊",
-      gradient: "linear-gradient(135deg, #6C63FF 0%, #3F3D56 100%)"
+      gradient: "linear-gradient(135deg, #4ECDC4 0%, #556270 100%)",
+      items: [
+        "Advanced candidate search",
+        "AI-powered recommendations",
+        "Large talent database",
+        "Quick candidate matching"
+      ]
     }
   ];
 
@@ -30,81 +36,64 @@ const HomePage = () => {
     <Box sx={{ overflow: 'hidden' }}>
       <HomeHero />
       
-      {/* Enhanced Features Section */}
+      {/* User Type Section */}
       <Box sx={{ py: 12, bgcolor: 'background.paper' }}>
         <Container maxWidth="lg">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <Typography variant="h3" sx={{ 
-              textAlign: 'center', 
-              mb: 2,
-              fontWeight: 700,
-              color: 'primary.main'
-            }}>
-              Why Choose Us?
-            </Typography>
-            <Typography variant="h6" sx={{ 
-              textAlign: 'center', 
-              mb: 8,
-              color: 'text.secondary',
-              maxWidth: '600px',
-              mx: 'auto'
-            }}>
-              Revolutionize your hiring process with our cutting-edge AI technology
-            </Typography>
-          </motion.div>
-          
-          <Grid container spacing={4}>
+          <Grid container spacing={6}>
             {features.map((feature, index) => (
-              <Grid item xs={12} md={4} key={index}>
+              <Grid item xs={12} md={6} key={index}>
                 <motion.div
                   initial={{ opacity: 0, y: 50 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.2 }}
-                  viewport={{ once: true, margin: "-100px" }}
                 >
                   <Box sx={{
                     p: 4,
-                    height: '100%',
                     borderRadius: 4,
                     background: '#fff',
                     boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
-                    overflow: 'hidden',
+                    height: '100%',
+                    transition: 'transform 0.3s ease',
                     '&:hover': {
                       transform: 'translateY(-8px)',
-                      boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-                      '& .feature-icon': {
-                        transform: 'scale(1.1)',
-                      }
                     }
                   }}>
                     <Box sx={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '4px',
-                      background: feature.gradient
-                    }} />
-                    <Box className="feature-icon" sx={{
                       fontSize: '3rem',
-                      mb: 2,
-                      transition: 'transform 0.3s ease'
+                      mb: 2
                     }}>
                       {feature.icon}
                     </Box>
-                    <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+                    <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
                       {feature.title}
                     </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                    <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
                       {feature.description}
                     </Typography>
+                    <List>
+                      {feature.items.map((item, idx) => (
+                        <ListItem key={idx} sx={{ p: 0, mb: 1 }}>
+                          <ListItemIcon sx={{ minWidth: 36 }}>
+                            <CheckCircleOutline sx={{ color: 'primary.main' }} />
+                          </ListItemIcon>
+                          <ListItemText primary={item} />
+                        </ListItem>
+                      ))}
+                    </List>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      sx={{
+                        mt: 3,
+                        background: feature.gradient,
+                        '&:hover': {
+                          background: feature.gradient,
+                          filter: 'brightness(0.9)'
+                        }
+                      }}
+                    >
+                      {feature.title === "For Job Seekers" ? "Upload Resume" : "Start Recruiting"}
+                    </Button>
                   </Box>
                 </motion.div>
               </Grid>
