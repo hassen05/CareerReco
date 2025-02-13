@@ -62,11 +62,16 @@ function ResumeRecommender() {
     <Box>
       {/* Hero Section */}
       <PageHero 
+        
         title="Smart Recommendations" 
         subtitle="Find your perfect candidates with AI-powered matching"
-        image="/recommend-header.png"
-        gradientStart="rgba(255, 182, 193, 0.9)"
-        gradientEnd="rgba(255, 143, 163, 0.7)"
+        image="/PageHeader.jpg"
+        gradientStart="rgb(250, 250, 250)"
+        gradientEnd="rgba(219, 13, 51, 0.7)"
+        titleColor="white"  // Custom prop (if supported)
+        subtitleColor="white"  // Custom prop (if supported)
+       
+      
       />
 
       {/* Main Content */}

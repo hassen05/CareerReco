@@ -5,6 +5,9 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 from collections import defaultdict
+from functools import lru_cache
+import time
+import logging
 
 # Load models
 nlp = spacy.load("en_core_web_sm")
@@ -18,14 +21,32 @@ WEIGHTS = {
     'education': 0.05
 }
 
+logger = logging.getLogger(__name__)
+
 def load_resumes(json_path="merged_resumes.json"):
-    """Load resumes from JSON file with error handling"""
+    """Load and preprocess resumes with validation"""
     try:
         with open(json_path) as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
+            resumes = json.load(f)
+        
+        # Validate and preprocess
+        valid_resumes = []
+        for resume in resumes:
+            if validate_resume(resume):
+                resume['preprocessed_text'] = preprocess_text(
+                    enhance_resume_embedding(resume)
+                )
+                valid_resumes.append(resume)
+        
+        return valid_resumes
+    except Exception as e:
         print(f"Error loading resumes: {e}")
         return []
+
+def validate_resume(resume):
+    """Validate required resume fields"""
+    required_fields = ['skills', 'experience', 'education']
+    return all(field in resume for field in required_fields)
 
 def extract_job_requirements(job_desc):
     """Extract key requirements from job description using NLP"""
@@ -158,3 +179,32 @@ def recommend_resumes(job_desc, resumes, top_n=5):
         },
         "embedding": None
     } for resume, score, score_breakdown in scored_resumes[:top_n]]
+
+def preprocess_text(text):
+    """Clean and standardize text before embedding"""
+    doc = nlp(text.lower())
+    tokens = [token.text for token in doc 
+             if not token.is_stop and not token.is_punct]
+    return " ".join(tokens)
+
+def get_skill_similarity(resume_skills, job_skills):
+    """Calculate skill-specific similarity"""
+    resume_set = set(s.lower() for s in resume_skills)
+    job_set = set(s.lower() for s in job_skills)
+    if not job_set:
+        return 0
+    return len(resume_set.intersection(job_set)) / len(job_set)
+
+@lru_cache(maxsize=1000)
+def get_embedding(text):
+    """Cache embeddings for better performance"""
+    return model.encode([text])[0]
+
+def log_recommendation_metrics(job_desc, num_candidates, duration):
+    """Log recommendation performance metrics"""
+    logger.info({
+        'event': 'recommendation',
+        'candidates': num_candidates,
+        'duration': duration,
+        'desc_length': len(job_desc)
+    })
