@@ -29,8 +29,7 @@ function UploadPage() {
         title="Upload Your Resume" 
         subtitle="Boost your chances with AI-powered matching"
         
-        gradientStart="rgba(182, 255, 240, 0.9)"
-        gradientEnd="rgba(219, 13, 51, 0.7)"
+        
       />
 
       {/* Main Content */}

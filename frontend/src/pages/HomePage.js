@@ -1,8 +1,14 @@
+// ... existing imports ...
 import React from 'react';
-import { Container, Box, Typography, Grid, Button, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+
+import { Container, Box, Typography, Grid, Button, List, ListItem, ListItemIcon, ListItemText, Avatar } from '@mui/material';
+
 import { motion } from 'framer-motion';
+
 import HomeHero from '../components/HomeHero';
+
 import { CheckCircleOutline } from '@mui/icons-material';
+
 
 const HomePage = () => {
   const features = [
@@ -16,7 +22,8 @@ const HomePage = () => {
         "AI-powered job matching",
         "Professional profile creation",
         "Increased visibility to recruiters"
-      ]
+      ],
+      cta: "Upload Resume"
     },
     {
       title: "For Recruiters",
@@ -28,17 +35,64 @@ const HomePage = () => {
         "AI-powered recommendations",
         "Large talent database",
         "Quick candidate matching"
-      ]
+      ],
+      cta: "Start Recruiting"
     }
+  ];
+
+  const stats = [
+    { value: "10,000+", label: "Successful Matches" },
+    { value: "95%", label: "Candidate Satisfaction" },
+    { value: "3x", label: "Faster Hiring" },
+    { value: "50+", label: "Industries Served" }
   ];
 
   return (
     <Box sx={{ overflow: 'hidden' }}>
       <HomeHero />
       
+      {/* Stats Section */}
+      <Box sx={{ py: 8, bgcolor: 'background.paper' }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} sx={{ mb: 8 }}>
+            {stats.map((stat, index) => (
+              <Grid item xs={6} sm={3} key={index}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h3" sx={{ 
+                      fontWeight: 700,
+                      background: 'linear-gradient(45deg, #553d8e 0%, #9ba2c2 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent'
+                    }}>
+                      {stat.value}
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: 'text.secondary' }}>
+                      {stat.label}
+                    </Typography>
+                  </Box>
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
       {/* User Type Section */}
       <Box sx={{ py: 12, bgcolor: 'background.paper' }}>
         <Container maxWidth="lg">
+          <Typography variant="h2" sx={{ 
+            textAlign: 'center',
+            mb: 8,
+            fontWeight: 700,
+            color: 'primary.main'
+          }}>
+            Designed for Everyone
+          </Typography>
           <Grid container spacing={6}>
             {features.map((feature, index) => (
               <Grid item xs={12} md={6} key={index}>
@@ -92,7 +146,7 @@ const HomePage = () => {
                         }
                       }}
                     >
-                      {feature.title === "For Job Seekers" ? "Upload Resume" : "Start Recruiting"}
+                      {feature.cta}
                     </Button>
                   </Box>
                 </motion.div>
@@ -114,7 +168,7 @@ const HomePage = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'url("/path/to/pattern.svg")', // Add a subtle pattern overlay
+          background: 'url("/path/to/pattern.svg")',
           opacity: 0.1
         }
       }}>
@@ -221,7 +275,7 @@ const HomePage = () => {
         <Container maxWidth="lg">
           <Box sx={{ 
             textAlign: 'center', 
-            p: 8, 
+            p:8, 
             borderRadius: 4,
             bgcolor: 'background.paper',
             boxShadow: 3
@@ -255,7 +309,56 @@ const HomePage = () => {
           </Box>
         </Container>
       </Box>
+
+      {/* Testimonials Section */}
+      <Box sx={{ py: 12, bgcolor: 'background.paper' }}>
+        <Container maxWidth="lg">
+          <Typography variant="h2" sx={{ 
+            textAlign: 'center',
+            mb: 8,
+            fontWeight: 700,
+            color: 'primary.main'
+          }}>
+            What Our Users Say
+          </Typography>
+          <Grid container spacing={4}>
+            {[1, 2, 3].map((index) => (
+              <Grid item xs={12} md={4} key={index}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <Box sx={{
+                    p: 4,
+                    borderRadius: 4,
+                    background: '#fff',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    height: '100%'
+                  }}>
+                    <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+                      "ResumeRec has completely transformed our hiring process. The AI matching is incredibly accurate and has saved us countless hours."
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar src="/path/to/user.jpg" />
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          John Doe
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          HR Manager, TechCorp
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
     </Box>
   );
 };
+
 export default HomePage;

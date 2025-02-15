@@ -51,6 +51,16 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
   }
 }));
 
+const AndMoreChip = styled(Box)(({ theme }) => ({
+  backgroundColor: theme.palette.grey[100],
+  color: theme.palette.text.secondary,
+  padding: '2px 6px',
+  borderRadius: '4px',
+  fontSize: '0.7rem',
+  fontStyle: 'italic',
+  border: `1px solid ${theme.palette.grey[300]}`,
+}));
+
 const SearchForm = ({ onSubmit, loading }) => {
   const theme = useTheme();
   const [jobDesc, setJobDesc] = useState('');

@@ -8,6 +8,10 @@ from collections import defaultdict
 from functools import lru_cache
 import time
 import logging
+from resume_recommender.settings import mongo_db
+from django.core.cache import cache
+from multiprocessing import Pool
+from datetime import datetime
 
 # Load models
 nlp = spacy.load("en_core_web_sm")
@@ -23,25 +27,18 @@ WEIGHTS = {
 
 logger = logging.getLogger(__name__)
 
-def load_resumes(json_path="merged_resumes.json"):
-    """Load and preprocess resumes with validation"""
-    try:
-        with open(json_path) as f:
-            resumes = json.load(f)
-        
-        # Validate and preprocess
-        valid_resumes = []
-        for resume in resumes:
-            if validate_resume(resume):
-                resume['preprocessed_text'] = preprocess_text(
-                    enhance_resume_embedding(resume)
-                )
-                valid_resumes.append(resume)
-        
-        return valid_resumes
-    except Exception as e:
-        print(f"Error loading resumes: {e}")
-        return []
+def load_resumes():
+    """Load resumes from MongoDB"""
+    resumes_collection = mongo_db["resumes"]
+    resumes = list(resumes_collection.find())
+    for resume in resumes:
+        dob = datetime.strptime(resume["dob"], "%Y-%m-%d")  # Parse the date of birth
+        today = datetime.today()
+        age = today.year - dob.year
+        if (today.month, today.day) < (dob.month, dob.day):
+            age -= 1
+        resume["age"] = age  # Add the age field to the resume
+    return resumes
 
 def validate_resume(resume):
     """Validate required resume fields"""
@@ -128,57 +125,30 @@ def calculate_enhanced_score(resume, job_embedding, requirements):
     total_score = sum(WEIGHTS[k] * scores[k] for k in WEIGHTS)
     return total_score
 
+def get_job_embedding(job_desc):
+    cache_key = f"job_embedding_{hash(job_desc)}"
+    embedding = cache.get(cache_key)
+    
+    if not embedding:
+        embedding = model.encode(job_desc).tobytes()
+        cache.set(cache_key, embedding, timeout=3600)  # Cache for 1 hour
+    
+    return np.frombuffer(embedding, dtype="float32")
+
+def score_resume(resume, job_embedding):
+    resume_embedding = np.frombuffer(resume["embedding"], dtype="float32")
+    return resume, cosine_similarity([job_embedding], [resume_embedding])[0][0]
+
 def recommend_resumes(job_desc, resumes, top_n=5):
-    """Enhanced recommendation system with multiple scoring factors"""
-    # Process job description
-    requirements = extract_job_requirements(job_desc)
-    job_embedding = model.encode([job_desc])
+    job_embedding = get_job_embedding(job_desc)
     
-    # Convert top_n to integer
-    try:
-        top_n = int(top_n)
-    except (ValueError, TypeError):
-        top_n = 5
-
-    scored_resumes = []
+    with Pool() as pool:
+        scored_resumes = pool.starmap(score_resume, [(resume, job_embedding) for resume in resumes])
     
-    for resume in resumes:
-        # Generate/validate embedding
-        if "embedding" not in resume:
-            embedding_text = enhance_resume_embedding(resume)
-            resume["embedding"] = model.encode(embedding_text).astype(np.float32).tobytes()
-        
-        # Calculate enhanced score and breakdown
-        scores = defaultdict(float)
-        scores['similarity'] = cosine_similarity(job_embedding, model.encode([enhance_resume_embedding(resume)]))[0][0]
-        scores['experience'] = min(sum(job['years'] for job in resume.get('experience', [])) / max(requirements['experience'], 1), 1.0)
-        resume_text = ' '.join(resume.get('skills', []) + [resume.get('education', '')])
-        matches = sum(1 for kw in requirements['keywords'] if kw in resume_text)
-        scores['keywords'] = matches / len(requirements['keywords']) if len(requirements['keywords']) > 0 else 0
-
-        scores['education'] = 1.0 if requirements['education'].lower() in resume.get('education', '').lower() else 0
-
-        # Calculate final weighted score
-        total_score = sum(WEIGHTS[k] * scores[k] for k in WEIGHTS)
-
-        # Store score with resume
-        scored_resumes.append((resume, total_score, scores))  # Include breakdown
-
-    # Sort by composite score
     scored_resumes.sort(key=lambda x: x[1], reverse=True)
-
-    # Format output with explanation
-    return [{
-        **resume,
-        "score": float(score),
-        "score_breakdown": {
-            "similarity": float(score_breakdown['similarity']),
-            "experience": float(score_breakdown['experience']),
-            "keywords": float(score_breakdown['keywords']),
-            "education": float(score_breakdown['education'])
-        },
-        "embedding": None
-    } for resume, score, score_breakdown in scored_resumes[:top_n]]
+    
+    # Include score in the returned data
+    return [{"resume": resume, "score": score} for resume, score in scored_resumes[:top_n]]
 
 def preprocess_text(text):
     """Clean and standardize text before embedding"""
