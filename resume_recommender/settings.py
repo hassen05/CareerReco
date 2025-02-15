@@ -13,10 +13,18 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from datetime import datetime
+from pymongo import MongoClient
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Add MongoDB configuration
+MONGO_URI = "mongodb://localhost:27017/"  # Local MongoDB
+DATABASE_NAME = "resumerec"
+
+# Initialize MongoDB client
+mongo_client = MongoClient(MONGO_URI)
+mongo_db = mongo_client[DATABASE_NAME]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -39,20 +47,20 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-     'recommender',
-     'rest_framework',
-    'corsheaders',
+    "recommender",
+    "rest_framework",
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-     'corsheaders.middleware.CorsMiddleware',
 ]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3001",  # React dev server
@@ -85,7 +93,14 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
-    }
+    },
+    "mongo": {
+        "ENGINE": "djongo",  # Use djongo for MongoDB integration
+        "NAME": "resumerec",
+        "CLIENT": {
+            "host": "mongodb://localhost:27017/" 
+        },
+    },
 }
 
 
@@ -160,3 +175,11 @@ LOGGING = {
 
 # Ensure logs directory exists
 os.makedirs('logs', exist_ok=True)
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",  # Unique identifier for the cache
+    }
+}
+

@@ -58,19 +58,27 @@ const ScoreBadge = styled(Chip)(({ theme }) => ({
   boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
 }));
 
-const DetailChip = styled(Chip)(({ theme }) => ({
-  background: alpha(theme.palette.primary.main, 0.06),
-  color: theme.palette.text.primary,
-  fontWeight: 600,
-  padding: theme.spacing(0.5),
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-  '&:hover': {
-    background: alpha(theme.palette.primary.main, 0.1),
-  }
+const DetailChip = styled(Box)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  color: theme.palette.primary.main,
+  padding: '4px 8px',
+  borderRadius: '4px',
+  fontSize: '0.8rem',
+}));
+
+const AndMoreChip = styled(Box)(({ theme }) => ({
+  backgroundColor: 'transparent',
+  color: theme.palette.text.secondary,
+  padding: '2px 6px',
+  borderRadius: '4px',
+  fontSize: '0.7rem',
+  fontStyle: 'italic',
 }));
 
 const ResumeCard = ({ resume }) => {
   const theme = useTheme();
+  const MAX_SKILLS = 3;  // Maximum number of skills to show
+  const MAX_CERTS = 2;   // Maximum number of certifications to show
 
   return (
     <motion.div
@@ -103,19 +111,25 @@ const ResumeCard = ({ resume }) => {
           <Stack spacing={2} sx={{ p: 3 }}>
             <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.1) }} />
 
-            <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 1.5 }}>
-              <DetailChip label={`📧 ${resume.email}`} />
-              <DetailChip label={`📱 ${resume.phone}`} />
-              <DetailChip label={`🎂 ${resume.age} years`} />
-            </Stack>
+            {/* Age Field */}
+            {resume.age && (
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                <DetailChip>🎂 {resume.age} years</DetailChip>
+              </Stack>
+            )}
 
-            <Section title="🎓 Education" content={resume.education} />
+            <Section title="🎓 Education">
+              <Typography variant="body2">{resume.education}</Typography>
+            </Section>
             
             <Section title="🛠️ Core Skills">
               <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                {resume.skills.map((skill, index) => (
-                  <DetailChip key={index} label={skill} />
+                {resume.skills.slice(0, MAX_SKILLS).map((skill, index) => (
+                  <DetailChip key={index}>{skill}</DetailChip>
                 ))}
+                {resume.skills.length > MAX_SKILLS && (
+                  <AndMoreChip>+{resume.skills.length - MAX_SKILLS} more</AndMoreChip>
+                )}
               </Stack>
             </Section>
 
@@ -130,16 +144,19 @@ const ResumeCard = ({ resume }) => {
             <Section title="🌍 Languages">
               <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
                 {resume.languages.map((lang, index) => (
-                  <DetailChip key={index} label={lang} />
+                  <DetailChip key={index}>{lang}</DetailChip>
                 ))}
               </Stack>
             </Section>
 
             <Section title="🏆 Certifications">
               <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                {resume.certifications.map((cert, index) => (
-                  <DetailChip key={index} label={cert} />
+                {resume.certifications.slice(0, MAX_CERTS).map((cert, index) => (
+                  <DetailChip key={index}>{cert}</DetailChip>
                 ))}
+                {resume.certifications.length > MAX_CERTS && (
+                  <AndMoreChip>+{resume.certifications.length - MAX_CERTS} more</AndMoreChip>
+                )}
               </Stack>
             </Section>
           </Stack>
@@ -149,23 +166,11 @@ const ResumeCard = ({ resume }) => {
   );
 };
 
-const Section = ({ title, content, children }) => (
-  <Box>
-    <Typography variant="subtitle1" sx={{ 
-      fontWeight: 600, 
-      mb: 1.5,
-      color: 'primary.main'
-    }}>
+const Section = ({ title, children }) => (
+  <Box sx={{ mb: 2 }}>
+    <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
       {title}
     </Typography>
-    {content && (
-      <Typography variant="body2" sx={{ 
-        color: 'text.secondary',
-        lineHeight: 1.6 
-      }}>
-        {content}
-      </Typography>
-    )}
     {children}
   </Box>
 );

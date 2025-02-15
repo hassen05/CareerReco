@@ -9,8 +9,9 @@ import ResumeRecommender from './pages/ResumeRecommender';
 import UploadPage from './pages/UploadPage';
 import Footer from './components/Footer';
 import AboutUs from './pages/AboutUs';
-import Signup from './pages/Signup';
-
+import RoleSelection from './pages/RoleSelection';
+import CandidateSignup from './pages/CandidateSignup';
+import RecruiterSignup from './pages/RecruiterSignup';
 
 function App() {
   return (
@@ -22,7 +23,9 @@ function App() {
         <Route path="/recommend" element={<ResumeRecommender />} />
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/about" element={<AboutUs />} />
-        <Route path="/Signup" element={<Signup />} />
+        <Route path="/signup" element={<RoleSelection />} />
+        <Route path="/signup/candidate" element={<CandidateSignup />} />
+        <Route path="/signup/recruiter" element={<RecruiterSignup />} />
       </Routes>
       <Footer />
     </ThemeProvider>

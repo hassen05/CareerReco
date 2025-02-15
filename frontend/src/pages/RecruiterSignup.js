@@ -9,15 +9,11 @@ import {
   InputAdornment,
   IconButton,
   Divider,
-  Link,
-  FormControl,
-  Select,
-  MenuItem,
-  FormHelperText
+  Link
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { alpha, styled } from '@mui/material/styles';
-import { Visibility, VisibilityOff, Email, Lock, Business, Person, Google, GitHub } from '@mui/icons-material';
+import { Visibility, VisibilityOff, Email, Lock, Person, Business } from '@mui/icons-material';
 import PageHero from '../components/PageHero';
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
@@ -41,32 +37,13 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
   }
 }));
 
-const StyledSelect = styled(Select)(({ theme }) => ({
-  '& .MuiOutlinedInput-notchedOutline': {
-    border: 'none'
-  },
-  borderRadius: theme.shape.borderRadius * 2,
-  backgroundColor: alpha(theme.palette.background.default, 0.8),
-  transition: 'all 0.3s ease',
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  '&:hover': {
-    backgroundColor: alpha(theme.palette.background.default, 0.95),
-    border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-  },
-  '&.Mui-focused': {
-    backgroundColor: alpha(theme.palette.background.default, 1),
-    border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-    boxShadow: `0 0 0 4px ${alpha(theme.palette.primary.main, 0.1)}`
-  }
-}));
-
-function Signup() {
+function RecruiterSignup() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
-    planType: 'basic'
+    company: '',
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -76,14 +53,14 @@ function Signup() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Subscribing with:', formData);
+    console.log('Recruiter signing up with:', formData);
   };
 
   return (
     <Box>
       <PageHero 
-        title="Get Started Today" 
-        subtitle="Join thousands of professionals using AI-powered recruitment"
+        title="Recruiter Sign Up" 
+        subtitle="Join thousands of recruiters using AI-powered recruitment"
         image="/SubscribeHeader.jpg"
       />
 
@@ -103,63 +80,6 @@ function Signup() {
               border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
             }}
           >
-            {/* Social Login Buttons */}
-            <Box sx={{ mb: 3 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<Google />}
-                sx={{
-                  mb: 2,
-                  py: 1.5,
-                  borderRadius: 3,
-                  borderColor: (theme) => alpha(theme.palette.divider, 0.1),
-                  backgroundColor: '#fff',
-                  color: 'text.primary',
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 500,
-                  '&:hover': {
-                    backgroundColor: '#f8f8f8',
-                    borderColor: (theme) => alpha(theme.palette.primary.main, 0.2),
-                    transform: 'translateY(-2px)',
-                    boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
-                  }
-                }}
-              >
-                Continue with Google
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<GitHub />}
-                sx={{
-                  py: 1.5,
-                  borderRadius: 3,
-                  borderColor: (theme) => alpha(theme.palette.divider, 0.1),
-                  backgroundColor: '#fff',
-                  color: 'text.primary',
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 500,
-                  '&:hover': {
-                    backgroundColor: '#f8f8f8',
-                    borderColor: (theme) => alpha(theme.palette.primary.main, 0.2),
-                    transform: 'translateY(-2px)',
-                    boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
-                  }
-                }}
-              >
-                Continue with GitHub
-              </Button>
-            </Box>
-
-            <Divider sx={{ my: 3 }}>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                OR
-              </Typography>
-            </Divider>
-
             <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <StyledTextField
@@ -231,18 +151,21 @@ function Signup() {
                 }}
               />
 
-              <FormControl fullWidth>
-                <StyledSelect
-                  value={formData.planType}
-                  name="planType"
-                  onChange={handleChange}
-                >
-                  <MenuItem value="basic">Basic Plan - $99/month</MenuItem>
-                  <MenuItem value="pro">Pro Plan - $199/month</MenuItem>
-                  <MenuItem value="enterprise">Enterprise Plan - Custom</MenuItem>
-                </StyledSelect>
-                <FormHelperText>Select your subscription plan</FormHelperText>
-              </FormControl>
+              <StyledTextField
+                label="Company Name"
+                name="company"
+                fullWidth
+                required
+                value={formData.company}
+                onChange={handleChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Business sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
               <Button
                 type="submit"
@@ -265,7 +188,7 @@ function Signup() {
                   }
                 }}
               >
-                Start Free Trial
+                Sign Up
               </Button>
 
               <Typography variant="caption" sx={{ textAlign: 'center', color: 'text.secondary' }}>
@@ -284,13 +207,10 @@ function Signup() {
                   sx={{ 
                     color: 'primary.main',
                     textDecoration: 'none',
-                    fontWeight: 600,
-                    '&:hover': {
-                      textDecoration: 'underline'
-                    }
+                    fontWeight: 600
                   }}
                 >
-                  Sign in here
+                  Sign In
                 </Link>
               </Box>
             </Box>
@@ -301,4 +221,4 @@ function Signup() {
   );
 }
 
-export default Signup;
+export default RecruiterSignup; 

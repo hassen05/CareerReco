@@ -1,131 +1,166 @@
 // components/Navbar.js
 import React, { useState, useEffect } from 'react';
-import { AppBar, Toolbar, Typography, Box, Button, Container } from '@mui/material';
+import { 
+  AppBar, 
+  Toolbar, 
+  Typography, 
+  Box, 
+  Button, 
+  Container,
+  IconButton,
+  Menu,
+  MenuItem,
+  Divider
+} from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import MenuIcon from '@mui/icons-material/Menu';
 
 const Navbar = () => {
   const location = useLocation();
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const isMobileMenuOpen = Boolean(anchorEl);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      // Calculate scroll progress (0 to 1) over the first 100px of scroll
-      const progress = Math.min(window.scrollY / 100, 1);
-      setScrollProgress(progress);
-    };
-    
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const handleMobileMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
 
-  // Calculate opacity based on scroll progress
-  const bgOpacity = 0.8 * scrollProgress;
-  const isScrolled = scrollProgress > 0;
+  const handleMobileMenuClose = () => {
+    setAnchorEl(null);
+  };
 
-  const candidateLinks = [
+  const navLinks = [
     { label: "Home", path: "/" },
+    { label: "Find Candidates", path: "/recommend" },
     { label: "Upload Resume", path: "/upload" },
-    { label: "My Profile", path: "/profile" },
+    { label: "About", path: "/about" },
+    { label: "Sign Up", path: "/signup" }
   ];
 
-  const recruiterLinks = [
-    { label: "Find Candidates", path: "/recommend" },
-    { label: "View Database", path: "/candidates" },
-  ];
+  const renderMobileMenu = (
+    <Menu
+      anchorEl={anchorEl}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      keepMounted
+      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      open={isMobileMenuOpen}
+      onClose={handleMobileMenuClose}
+      PaperProps={{
+        sx: {
+          mt: 1,
+          minWidth: 200,
+          borderRadius: 2,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+          '& .MuiMenuItem-root': {
+            py: 1.5,
+            px: 3,
+          }
+        }
+      }}
+    >
+      {navLinks.map((link) => (
+        <MenuItem
+          key={link.path}
+          component={Link}
+          to={link.path}
+          onClick={handleMobileMenuClose}
+          sx={{
+            color: location.pathname === link.path ? 'primary.main' : 'text.primary',
+            fontWeight: location.pathname === link.path ? 600 : 500
+          }}
+        >
+          {link.label}
+        </MenuItem>
+      ))}
+      <Divider sx={{ my: 1 }} />
+      <Box sx={{ px: 2, py: 1 }}>
+        <Button
+          fullWidth
+          variant="contained"
+          component={Link}
+          to="/signup"
+          sx={{
+            background: 'linear-gradient(45deg, #553d8e 0%, #9ba2c2 100%)',
+            color: 'white',
+            fontWeight: 600,
+            py: 1,
+            borderRadius: 2,
+            '&:hover': {
+              background: 'linear-gradient(45deg, #4a3579 0%, #8a91b0 100%)'
+            }
+          }}
+        >
+          Sign Up Free
+        </Button>
+      </Box>
+    </Menu>
+  );
 
   return (
     <AppBar 
-      position="fixed" 
-      elevation={isScrolled ? 2 : 0}
+      position="sticky"
+      elevation={0}
       sx={{ 
-        backgroundColor: `rgba(255, 255, 255, ${bgOpacity})`,
-        transition: 'all 0.3s ease',
-        backdropFilter: isScrolled ? 'blur(8px)' : 'none',
-        height: '64px',
+        backgroundColor: 'background.paper',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        backdropFilter: 'blur(8px)',
+        zIndex: 1200
       }}
     >
       <Container maxWidth="lg">
-        <Toolbar 
-          disableGutters 
-          sx={{ 
-            minHeight: '64px !important',
-            py: 0,
-            gap: 1.5
-          }}
-        >
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
+        <Toolbar disableGutters>
+          {/* Logo */}
+          <Typography
+            variant="h5"
+            component={Link}
+            to="/"
+            sx={{
+              fontWeight: 700,
+              background: 'linear-gradient(45deg, #553d8e 0%, #9ba2c2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textDecoration: 'none',
+              mr: 4
+            }}
           >
-            <Typography
-              variant="h5"
-              component={Link}
-              to="/"
-              sx={{
-                fontWeight: 700,
-                background: scrollProgress > 0.5
-                  ? 'linear-gradient(45deg, #553d8e 0%, #9ba2c2 100%)'
-                  : 'linear-gradient(45deg, #fff 0%, rgba(255,255,255,0.8) 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                textDecoration: 'none',
-                fontSize: '1.5rem',
-              }}
-            >
-              Recruiter.ai
-            </Typography>
-          </motion.div>
+            ResumeRec
+          </Typography>
+
+          {/* Desktop Links */}
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
+            {navLinks.map((link) => (
+              <Button
+                key={link.path}
+                component={Link}
+                to={link.path}
+                sx={{
+                  color: location.pathname === link.path ? 'primary.main' : 'text.primary',
+                  fontWeight: location.pathname === link.path ? 600 : 500,
+                  '&:hover': {
+                    color: 'primary.main'
+                  }
+                }}
+              >
+                {link.label}
+              </Button>
+            ))}
+          </Box>
 
           <Box sx={{ flexGrow: 1 }} />
 
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 0.75,
-            alignItems: 'center'
-          }}>
-            {/* Candidate Links */}
-            {candidateLinks.map((link) => (
-              <NavButton 
-                key={link.path}
-                to={link.path} 
-                label={link.label} 
-                scrollProgress={scrollProgress} 
-              />
-            ))}
-
-            {/* Divider */}
-            <Box 
-              sx={{ 
-                height: 20,
-                width: 1,
-                bgcolor: scrollProgress > 0.5 ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)',
-                my: 'auto',
-                mx: 1.5
-              }} 
-            />
-
-            {/* Recruiter Links */}
-            {recruiterLinks.map((link) => (
-              <NavButton 
-                key={link.path}
-                to={link.path} 
-                label={link.label} 
-                scrollProgress={scrollProgress} 
-              />
-            ))}
-
-            {/* Auth Buttons */}
+          {/* Auth Buttons */}
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1, alignItems: 'center' }}>
             <Button
               component={Link}
               to="/login"
-              size="small"
               sx={{
-                color: scrollProgress > 0.5 ? '#2C3E50' : '#fff',
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
-                py: 1.5,
+                color: 'text.primary',
                 fontWeight: 500,
+                '&:hover': {
+                  color: 'primary.main'
+                }
               }}
             >
               Login
@@ -134,70 +169,36 @@ const Navbar = () => {
               component={Link}
               to="/signup"
               variant="contained"
-              size="small"
               sx={{
                 background: 'linear-gradient(45deg, #553d8e 0%, #9ba2c2 100%)',
                 color: 'white',
                 fontWeight: 600,
-                py: 0.75,
-                px: 2.5,
-                borderRadius: '20px',
-                textTransform: 'none',
-                boxShadow: scrollProgress > 0.5 
-                  ? '0 4px 12px rgba(85, 61, 142, 0.2)' 
-                  : '0 4px 12px rgba(255, 255, 255, 0.2)',
-                border: scrollProgress > 0.5 
-                  ? 'none'
-                  : '1px solid rgba(255, 255, 255, 0.3)',
+                px: 3,
+                borderRadius: 2,
                 '&:hover': {
-                  background: 'linear-gradient(45deg, #4a3579 0%, #8a91b0 100%)',
-                  transform: 'translateY(-1px)',
-                  boxShadow: scrollProgress > 0.5 
-                    ? '0 6px 16px rgba(85, 61, 142, 0.25)' 
-                    : '0 6px 16px rgba(255, 255, 255, 0.25)',
-                },
-                transition: 'all 0.3s ease',
+                  background: 'linear-gradient(45deg, #4a3579 0%, #8a91b0 100%)'
+                }
               }}
             >
               Sign Up Free
             </Button>
           </Box>
+
+          {/* Mobile Menu */}
+          <IconButton
+            size="large"
+            edge="end"
+            color="inherit"
+            onClick={handleMobileMenuOpen}
+            sx={{ display: { md: 'none' }, color: 'text.primary' }}
+          >
+            <MenuIcon />
+          </IconButton>
         </Toolbar>
       </Container>
+      {renderMobileMenu}
     </AppBar>
   );
 };
-
-// Helper component for nav buttons
-const NavButton = ({ to, label, scrollProgress }) => (
-  <Button
-    component={Link}
-    to={to}
-    size="small"
-    sx={{
-      color: scrollProgress > 0.5 ? '#2C3E50' : '#fff',
-      fontWeight: 500,
-      position: 'relative',
-      transition: 'color 0.3s ease',
-      py: 0.5,
-      '&::after': {
-        content: '""',
-        position: 'absolute',
-        width: '0%',
-        height: '2px',
-        bottom: -2,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: 'linear-gradient(45deg, #553d8e 0%, #9ba2c2 100%)',
-        transition: 'width 0.3s ease',
-      },
-      '&:hover::after': {
-        width: '80%',
-      },
-    }}
-  >
-    {label}
-  </Button>
-);
 
 export default Navbar;
