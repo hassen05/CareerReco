@@ -92,84 +92,42 @@ ResumeRec is an innovative AI-powered recruitment platform designed to revolutio
 }
 ```
 
-### Migration Strategy
-1. **Data Transformation**:
-   - Convert string dates to Date objects
-   - Split experience years into startDate and endDate
-   - Add timestamps for tracking
+### Authentication with Supabase
+We'll use Supabase Auth for user management with the following schema:
 
-2. **Indexing**:
-   - Create indexes on frequently searched fields:
-     ```javascript
-     db.resumes.createIndex({ 'personalInfo.email': 1 })
-     db.resumes.createIndex({ skills: 1 })
-     db.resumes.createIndex({ 'experience.position': 1 })
-     ```
-
-3. **Data Validation**:
-   - Implement schema validation in MongoDB:
-     ```javascript
-     db.createCollection("resumes", {
-       validator: {
-         $jsonSchema: {
-           bsonType: "object",
-           required: ["personalInfo", "skills"],
-           properties: {
-             personalInfo: {
-               bsonType: "object",
-               required: ["name", "email"],
-               properties: {
-                 name: { bsonType: "string" },
-                 email: { bsonType: "string" }
-               }
-             },
-             skills: {
-               bsonType: "array",
-               minItems: 1,
-               items: { bsonType: "string" }
-             }
-           }
-         }
-       }
-     })
-     ```
-
-### Authentication Database
-We recommend using MongoDB for authentication to maintain consistency. Here's the schema:
-
-```javascript
-{
-  _id: ObjectId,
-  email: { type: String, unique: true },
-  passwordHash: String,
-  role: { type: String, enum: ['candidate', 'recruiter'] },
-  profile: {
-    firstName: String,
-    lastName: String,
-    contactInfo: {
-      phone: String,
-      address: String
-    }
-  },
-  createdAt: Date,
-  updatedAt: Date
-}
+```sql
+CREATE TABLE profiles (
+  id UUID REFERENCES auth.users PRIMARY KEY,
+  first_name TEXT,
+  last_name TEXT,
+  phone TEXT,
+  address TEXT,
+  profile_picture TEXT, -- URL to the profile picture in Supabase Storage
+  role TEXT CHECK (role IN ('candidate', 'recruiter')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
 ### Integration Strategy
-1. **Data Relationships**:
-   - Link resumes to users via email address
+1. **Profile Picture Storage**:
+   - Use Supabase Storage for profile pictures
+   - Store the URL in the Supabase profiles table
+   - Implement image upload endpoint using Supabase Storage API
+
+2. **Data Relationships**:
+   - Link resumes to users via Supabase user ID
    - Add reference to user in resume documents:
      ```javascript
      {
        _id: ObjectId,
-       userId: ObjectId, // Reference to user document
+       userId: String, // Supabase user ID
        ... // rest of resume fields
      }
      ```
 
-2. **Search Optimization**:
-   - Implement text indexes for full-text search:
+3. **Search Optimization**:
+   - Implement text indexes for full-text search in MongoDB:
      ```javascript
      db.resumes.createIndex({
        'personalInfo.name': 'text',
@@ -178,10 +136,23 @@ We recommend using MongoDB for authentication to maintain consistency. Here's th
      })
      ```
 
-3. **Data Security**:
-   - Implement field-level encryption for sensitive data
+4. **Data Security**:
+   - Use Supabase Auth for secure authentication
+   - Implement field-level encryption for sensitive data in MongoDB
    - Use MongoDB's built-in access control
    - Enable auditing for data access tracking
+
+## Environment Variables
+Update the `.env` file to include Supabase credentials and storage bucket name:
+```
+SUPABASE_URL=your-supabase-url
+SUPABASE_KEY=your-supabase-anon-key
+SUPABASE_STORAGE_BUCKET=profile-pictures
+MONGO_URI=mongodb://localhost:27017/resumerec
+SECRET_KEY=your-secret-key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
 
 ## Installation and Setup
 
@@ -224,15 +195,6 @@ We recommend using MongoDB for authentication to maintain consistency. Here's th
 
 ## API Documentation
 The backend API is documented using Swagger UI. After starting the backend server, access the documentation at:
-
-## Environment Variables
-Create a `.env` file in the backend directory with the following variables:
-```
-DATABASE_URL=postgresql://user:password@localhost:5432/resumerec
-SECRET_KEY=your-secret-key
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-```
 
 ## Testing
 Run tests for both frontend and backend:

@@ -12,15 +12,18 @@ import {
   MenuItem,
   Divider
 } from '@mui/material';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import MenuIcon from '@mui/icons-material/Menu';
+import { supabase } from '../supabaseClient';
 
 const Navbar = () => {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const isMobileMenuOpen = Boolean(anchorEl);
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   const handleMobileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -35,8 +38,40 @@ const Navbar = () => {
     { label: "Find Candidates", path: "/recommend" },
     { label: "Upload Resume", path: "/upload" },
     { label: "About", path: "/about" },
-    { label: "Sign Up", path: "/signup" }
+    
   ];
+
+  useEffect(() => {
+    // Check initial auth state
+    const checkAuth = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+      }
+    };
+
+    checkAuth();
+
+    // Listen for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   const renderMobileMenu = (
     <Menu
@@ -136,10 +171,11 @@ const Navbar = () => {
                 component={Link}
                 to={link.path}
                 sx={{
-                  color: location.pathname === link.path ? 'primary.main' : 'text.primary',
-                  fontWeight: location.pathname === link.path ? 600 : 500,
+                  color: 'primary.main',
+                  fontWeight: 600,
                   '&:hover': {
-                    color: 'primary.main'
+                    backgroundColor: 'primary.light',
+                    color: 'primary.contrastText'
                   }
                 }}
               >
@@ -152,45 +188,77 @@ const Navbar = () => {
 
           {/* Auth Buttons */}
           <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1, alignItems: 'center' }}>
-            <Button
-              component={Link}
-              to="/login"
-              sx={{
-                color: 'text.primary',
-                fontWeight: 500,
-                '&:hover': {
-                  color: 'primary.main'
-                }
-              }}
-            >
-              Login
-            </Button>
-            <Button
-              component={Link}
-              to="/signup"
-              variant="contained"
-              sx={{
-                background: 'linear-gradient(45deg, #553d8e 0%, #9ba2c2 100%)',
-                color: 'white',
-                fontWeight: 600,
-                px: 3,
-                borderRadius: 2,
-                '&:hover': {
-                  background: 'linear-gradient(45deg, #4a3579 0%, #8a91b0 100%)'
-                }
-              }}
-            >
-              Sign Up Free
-            </Button>
+            {user ? (
+              <>
+                <Button
+                  color="primary"
+                  variant="text"
+                  onClick={() => navigate('/profile')}
+                  sx={{
+                    fontWeight: 600,
+                    '&:hover': {
+                      backgroundColor: 'primary.light',
+                      color: 'primary.contrastText'
+                    }
+                  }}
+                >
+                  Profile
+                </Button>
+                <Button
+                  color="primary"
+                  variant="outlined"
+                  onClick={handleLogout}
+                  sx={{
+                    fontWeight: 600,
+                    '&:hover': {
+                      backgroundColor: 'primary.light',
+                      color: 'primary.contrastText'
+                    }
+                  }}
+                >
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  color="primary"
+                  variant="text"
+                  onClick={() => navigate('/login')}
+                  sx={{
+                    fontWeight: 600,
+                    '&:hover': {
+                      backgroundColor: 'primary.light',
+                      color: 'primary.contrastText'
+                    }
+                  }}
+                >
+                  Login
+                </Button>
+                <Button
+                  color="primary"
+                  variant="contained"
+                  onClick={() => navigate('/signup')}
+                  sx={{
+                    fontWeight: 600,
+                    '&:hover': {
+                      backgroundColor: 'primary.dark'
+                    }
+                  }}
+                >
+                  Sign Up
+                </Button>
+              </>
+            )}
           </Box>
 
           {/* Mobile Menu */}
           <IconButton
             size="large"
             edge="end"
-            color="inherit"
+            color="primary"
             onClick={handleMobileMenuOpen}
-            sx={{ display: { md: 'none' }, color: 'text.primary' }}
+            sx={{ display: { md: 'none' } }}
           >
             <MenuIcon />
           </IconButton>

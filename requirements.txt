@@ -1,8 +1,14 @@
-Django
+Django==5.1.6
 djangorestframework
 langdetect
 numpy
 scikit_learn
 sentence_transformers
-spacy
+spacy=3.8.4
 django-cors-headers
+pymongo
+djongo
+supabase
+python-dotenv
+
+

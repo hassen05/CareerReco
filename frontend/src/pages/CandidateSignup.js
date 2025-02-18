@@ -9,12 +9,18 @@ import {
   InputAdornment,
   IconButton,
   Divider,
-  Link
+  Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { alpha, styled } from '@mui/material/styles';
 import { Visibility, VisibilityOff, Email, Lock, Person } from '@mui/icons-material';
 import PageHero from '../components/PageHero';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
@@ -39,20 +45,52 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 
 function CandidateSignup() {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
     email: '',
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
-    console.log('Candidate signing up with:', formData);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: 'http://localhost:3001/complete-profile'
+        }
+      });
+
+      if (error) throw error;
+
+      // Create minimal profile in Supabase
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: data.user.id,
+          email: formData.email
+        }]);
+
+      if (profileError) throw profileError;
+
+      // Show confirmation message
+      setShowConfirmation(true);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -79,33 +117,7 @@ function CandidateSignup() {
               border: (theme) => `1px solid ${alpha(theme.palette.divider, 0.1)}`
             }}
           >
-            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <StyledTextField
-                  label="First Name"
-                  name="firstName"
-                  fullWidth
-                  required
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Person sx={{ color: 'text.secondary' }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <StyledTextField
-                  label="Last Name"
-                  name="lastName"
-                  fullWidth
-                  required
-                  value={formData.lastName}
-                  onChange={handleChange}
-                />
-              </Box>
-
+            <Box component="form" onSubmit={handleSignUp} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <StyledTextField
                 label="Email Address"
                 name="email"
@@ -150,6 +162,8 @@ function CandidateSignup() {
                 }}
               />
 
+              {error && <div className="error-message">{error}</div>}
+
               <Button
                 type="submit"
                 fullWidth
@@ -168,10 +182,19 @@ function CandidateSignup() {
                   },
                   '&:active': {
                     transform: 'translateY(0)',
+                  },
+                  '&:disabled': {
+                    background: (theme) => `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.5)} 30%, ${alpha(theme.palette.secondary.main, 0.5)} 90%)`,
+                    color: 'text.disabled',
+                    '&:hover': {
+                      transform: 'none',
+                      boxShadow: 'none'
+                    }
                   }
                 }}
+                disabled={loading}
               >
-                Sign Up
+                {loading ? 'Signing up...' : 'Sign Up'}
               </Button>
 
               <Typography variant="caption" sx={{ textAlign: 'center', color: 'text.secondary' }}>
@@ -203,6 +226,19 @@ function CandidateSignup() {
           </Paper>
         </motion.div>
       </Container>
+
+      <Dialog open={showConfirmation} onClose={() => setShowConfirmation(false)}>
+        <DialogTitle>Confirm Your Email</DialogTitle>
+        <DialogContent>
+          <Typography>
+            We've sent a confirmation email to {formData.email}. 
+            Please check your inbox and click the confirmation link to complete your registration.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowConfirmation(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

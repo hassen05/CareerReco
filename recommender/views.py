@@ -5,6 +5,7 @@ from .serializers import ResumeSerializer
 import logging
 from resume_recommender.settings import mongo_db
 from rest_framework import status
+from .models import User
 
 logger = logging.getLogger('recommender')
 
@@ -40,3 +41,29 @@ class ResumeDetailAPI(APIView):
         if resume:
             return Response(resume, status=status.HTTP_200_OK)
         return Response({"error": "Resume not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class ProfileAPI(APIView):
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(supabase_id=user_id)
+            profile_data = {
+                'id': user.id,
+                'first_name': user.profile.get('first_name', ''),
+                'last_name': user.profile.get('last_name', ''),
+                'email': user.email,
+                'profile_picture': user.profile.get('profile_picture', ''),
+                'bio': user.profile.get('bio', ''),
+            }
+            return Response(profile_data, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'}, 
+                status=status.HTTP_404_NOT_FOUND,
+                content_type='application/json'
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content_type='application/json'
+            )

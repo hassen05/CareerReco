@@ -33,12 +33,12 @@ class Resume(djongo_models.Model):
 
 class User(djongo_models.Model):
     _id = djongo_models.ObjectIdField()
+    supabase_id = djongo_models.CharField(max_length=255, unique=True)  # Supabase user ID
     email = djongo_models.EmailField(unique=True)
-    passwordHash = djongo_models.CharField(max_length=255)
     role = djongo_models.CharField(max_length=20, choices=[("candidate", "Candidate"), ("recruiter", "Recruiter")])
     profile = djongo_models.JSONField(default=dict)
-    createdAt = djongo_models.DateTimeField(auto_now_add=True)
-    updatedAt = djongo_models.DateTimeField(auto_now=True)
+    created_at = djongo_models.DateTimeField(auto_now_add=True)
+    updated_at = djongo_models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "users"

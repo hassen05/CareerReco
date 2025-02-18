@@ -44,24 +44,7 @@ const PageHero = ({ title, subtitle, image, gradientStart, gradientEnd }) => {
             {subtitle}
           </Typography>
           
-          <Button
-            component={Link}
-            to="/recommend"
-            variant="contained"
-            size="large"
-            sx={{
-              px: 6,
-              py: 2,
-              fontSize: '1.2rem',
-              bgcolor: 'white',
-              color: 'primary.main',
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.9)'
-              }
-            }}
-          >
-            Try It Free →
-          </Button>
+          
         </motion.div>
       </Container>
     </Box>

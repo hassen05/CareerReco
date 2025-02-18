@@ -14,6 +14,14 @@ from pathlib import Path
 import os
 from datetime import datetime
 from pymongo import MongoClient
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Supabase configuration
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -61,9 +69,11 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'recommender.middleware.SupabaseAuthentication',
 ]
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3001",  # React dev server
+    "http://localhost:3000",
+    "http://localhost:3001",
 ]
 ROOT_URLCONF = "resume_recommender.urls"
 
