@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .supabase_client import supabase
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -11,25 +12,44 @@ class SignUpView(APIView):
         try:
             email = request.data.get('email')
             password = request.data.get('password')
+            role = 'candidate'  # Hardcoded for candidate signup
             
             # Create user in Supabase
             response = supabase.auth.sign_up({
                 'email': email,
-                'password': password
+                'password': password,
+                'options': {
+                    'data': {
+                        'role': role,
+                        'account_type': 'candidate'
+                    }
+                }
             })
             
             if response.user:
+                # Create profile with role
+                profile_response = supabase.table('profiles').upsert({
+                    'id': response.user.id,
+                    'email': email,
+                    'role': role,
+                    'created_at': datetime.now().isoformat()
+                }).execute()
+                
+                if profile_response.error:
+                    raise Exception(profile_response.error.message)
+                
                 return Response({
-                    'message': 'User created successfully',
-                    'user_id': response.user.id
+                    'message': 'Candidate created successfully',
+                    'user_id': response.user.id,
+                    'role': role
                 }, status=status.HTTP_201_CREATED)
             else:
                 return Response({
-                    'error': 'User creation failed'
+                    'error': 'Candidate creation failed'
                 }, status=status.HTTP_400_BAD_REQUEST)
                 
         except Exception as e:
-            logger.error(f'Error in user signup: {str(e)}')
+            logger.error(f'Error in candidate signup: {str(e)}')
             return Response({
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

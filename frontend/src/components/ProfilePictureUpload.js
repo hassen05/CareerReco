@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { Button } from '@mui/material';
 import { supabase } from '../supabaseClient';
 
 function ProfilePictureUpload({ userId }) {
-  const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const handleUpload = async () => {
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
     if (!file) return;
     
     setUploading(true);
@@ -20,14 +21,12 @@ function ProfilePictureUpload({ userId }) {
 
       if (uploadError) throw uploadError;
 
-      // Update user profile with picture URL
       const { publicURL } = supabase.storage
         .from('profile-pictures')
         .getPublicUrl(filePath);
 
-      // Save URL to user profile
-      // ... make API call to save URL ...
-
+      // Return the URL to parent component
+      return publicURL;
     } catch (error) {
       alert(error.message);
     } finally {
@@ -36,16 +35,27 @@ function ProfilePictureUpload({ userId }) {
   };
 
   return (
-    <div>
-      <input 
-        type="file" 
-        onChange={(e) => setFile(e.target.files[0])}
+    <Button
+      variant="contained"
+      component="label"
+      disabled={uploading}
+      sx={{
+        mt: 2,
+        textTransform: 'none',
+        bgcolor: 'primary.main',
+        '&:hover': {
+          bgcolor: 'primary.dark'
+        }
+      }}
+    >
+      {uploading ? 'Uploading...' : 'Change Profile Picture'}
+      <input
+        type="file"
+        hidden
         accept="image/*"
+        onChange={handleUpload}
       />
-      <button onClick={handleUpload} disabled={uploading}>
-        {uploading ? 'Uploading...' : 'Upload'}
-      </button>
-    </div>
+    </Button>
   );
 }
 

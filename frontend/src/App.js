@@ -16,6 +16,7 @@ import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import CompleteProfilePage from './pages/CompleteProfilePage';
+import CreateResumePage from './pages/CreateResumePage';
 import { supabase } from './supabaseClient';
 
 function App() {
@@ -58,6 +59,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CompleteProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/resume/create" 
+          element={
+            <ProtectedRoute>
+              <CreateResumePage />
             </ProtectedRoute>
           }
         />

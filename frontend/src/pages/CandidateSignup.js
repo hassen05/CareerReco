@@ -68,26 +68,35 @@ function CandidateSignup() {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: 'http://localhost:3001/complete-profile'
+          emailRedirectTo: 'http://localhost:3001/complete-profile',
+          data: { 
+            role: 'candidate',
+            account_type: 'candidate'
+          }
         }
       });
 
       if (error) throw error;
 
-      // Create minimal profile in Supabase
+      // Create candidate profile
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert([{
+        .upsert({
           id: data.user.id,
-          email: formData.email
-        }]);
+          email: formData.email,
+          role: 'candidate',
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id',
+          returning: 'minimal'
+        });
 
       if (profileError) throw profileError;
 
-      // Show confirmation message
       setShowConfirmation(true);
     } catch (error) {
-      setError(error.message);
+      console.error('Signup error:', error);
+      setError(error.message || 'Failed to complete signup');
     } finally {
       setLoading(false);
     }
