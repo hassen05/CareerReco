@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RecommendAPI, ResumeListAPI, ResumeDetailAPI, ProfileAPI
+from .views import RecommendAPI, ResumeListAPI, ResumeDetailAPI, ProfileAPI, save_to_mongodb
 from .auth_views import SignUpView, LoginView
 
 urlpatterns = [
@@ -9,4 +9,5 @@ urlpatterns = [
     path('auth/signup/', SignUpView.as_view(), name='signup'),
     path('auth/login/', LoginView.as_view(), name='login'),
     path('profile/<str:user_id>/', ProfileAPI.as_view(), name='profile-api'),
+    path('save-resume/', save_to_mongodb, name='save_to_mongodb'),
 ]

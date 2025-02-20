@@ -30,6 +30,8 @@ const CreateResumePage = () => {
     languages: [],
     certifications: ['']
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchResume = async () => {
@@ -154,35 +156,82 @@ const CreateResumePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
 
-      // Upsert the resume
-      const { error } = await supabase
+      // Prepare resume data for Supabase
+      const supabaseResume = {
+        user_id: user.id,
+        ...resumeData,
+        updated_at: new Date().toISOString()
+      };
+
+      // Upsert to Supabase (update if exists, insert if not)
+      const { data, error } = await supabase
         .from('resumes')
-        .upsert({
-          user_id: user.id,
-          education: resumeData.education,
-          skills: resumeData.skills,
-          experience: resumeData.experience,
-          languages: resumeData.languages,
-          certifications: resumeData.certifications,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id', // Ensure we update based on user_id
-          returning: 'minimal'   // Don't return the updated record
-        });
+        .upsert([supabaseResume], {
+          onConflict: 'user_id',
+          returning: 'representation'
+        })
+        .select('*')
+        .single();
 
       if (error) throw error;
 
+      // Prepare resume data for MongoDB
+      const mongoResume = {
+        ...resumeData,
+        userId: user.id,
+        updatedAt: new Date()
+      };
+
+      // Save to MongoDB via Django API
+      const response = await fetch('http://localhost:8000/api/save-resume/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(mongoResume)
+      });
+
+      const responseData = await response.json();
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Failed to save to MongoDB');
+      }
+
+      // Handle success
       navigate('/profile');
     } catch (error) {
       console.error('Error saving resume:', error);
-      alert('Error saving resume: ' + (error.message || JSON.stringify(error)));
+      setError(error.message || 'Failed to save resume');
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  // Helper function to get CSRF token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -322,7 +371,9 @@ const CreateResumePage = () => {
                       value={exp.start_date}
                       onChange={(e) => handleChange('experience', index, 'start_date')(e)}
                       InputProps={{
-                        sx: { borderRadius: 2 },
+                        sx: { borderRadius: 2 }
+                      }}
+                      InputLabelProps={{
                         shrink: true
                       }}
                     />
@@ -336,7 +387,9 @@ const CreateResumePage = () => {
                       value={exp.end_date}
                       onChange={(e) => handleChange('experience', index, 'end_date')(e)}
                       InputProps={{
-                        sx: { borderRadius: 2 },
+                        sx: { borderRadius: 2 }
+                      }}
+                      InputLabelProps={{
                         shrink: true
                       }}
                     />
@@ -403,14 +456,7 @@ const CreateResumePage = () => {
                       key={index}
                       label={skill}
                       onDelete={() => handleRemoveItem('skills', index)}
-                      sx={{
-                        m: 0.5,
-                        bgcolor: 'primary.light',
-                        color: 'primary.contrastText',
-                        '& .MuiChip-deleteIcon': {
-                          color: 'inherit'
-                        }
-                      }}
+                      sx={{ m: 0.5 }}
                     />
                   ))}
                 </Box>
@@ -465,15 +511,10 @@ const CreateResumePage = () => {
                     value.map((option, index) => (
                       <Chip
                         key={index}
-                        {...getTagProps({ index })}
                         label={option}
-                        sx={{
-                          bgcolor: 'secondary.light',
-                          color: 'secondary.contrastText',
-                          '& .MuiChip-deleteIcon': {
-                            color: 'inherit'
-                          }
-                        }}
+                        onDelete={() => handleRemoveItem('languages', index)}
+                        sx={{ m: 0.5 }}
+                        {...getTagProps({ index })}
                       />
                     ))
                   }

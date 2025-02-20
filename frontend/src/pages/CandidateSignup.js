@@ -64,7 +64,7 @@ function CandidateSignup() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { user, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -78,22 +78,25 @@ function CandidateSignup() {
 
       if (error) throw error;
 
-      // Create candidate profile
-      const { error: profileError } = await supabase
+      // Create profile in profiles table
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .upsert({
-          id: data.user.id,
-          email: formData.email,
-          role: 'candidate',
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'id',
-          returning: 'minimal'
-        });
+        .insert([
+          { 
+            id: user.id,
+            email: user.email,
+            first_name: '',
+            last_name: '',
+            profile_picture: '',
+            role: 'candidate'
+          }
+        ])
+        .single();
 
       if (profileError) throw profileError;
 
-      setShowConfirmation(true);
+      // Redirect to profile page
+      navigate('/profile');
     } catch (error) {
       console.error('Signup error:', error);
       setError(error.message || 'Failed to complete signup');
