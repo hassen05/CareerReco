@@ -1,15 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Container, 
-  Typography, 
-  Button, 
-  TextField, 
-  Box, 
-  Paper,
-  InputAdornment,
-  IconButton,
-  Divider,
-  Link,
+  Container, Typography, Button,TextField,Box,Paper,InputAdornment,IconButton, Divider, Link,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -52,6 +43,7 @@ function CandidateSignup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -64,7 +56,7 @@ function CandidateSignup() {
     setError(null);
 
     try {
-      const { user, error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -76,27 +68,65 @@ function CandidateSignup() {
         }
       });
 
-      if (error) throw error;
+      console.log('Full Supabase response:', { data, error });
+      
+      if (error) {
+        console.error('Supabase signup error:', error);
+        throw error;
+      }
 
-      // Create profile in profiles table
-      const { data: profile, error: profileError } = await supabase
+      if (!data.user) {
+        throw new Error('User object is undefined');
+      }
+
+      console.log('User created successfully:', data.user);
+
+      // Check if profile already exists
+      const { data: existingProfile, error: profileFetchError } = await supabase
         .from('profiles')
-        .insert([
-          { 
-            id: user.id,
-            email: user.email,
-            first_name: '',
-            last_name: '',
-            profile_picture: '',
-            role: 'candidate'
-          }
-        ])
+        .select('*')
+        .eq('id', data.user.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileFetchError && profileFetchError.code !== 'PGRST116') { // Ignore "No rows found" error
+        console.error('Error fetching profile:', profileFetchError);
+        throw profileFetchError;
+      }
 
-      // Redirect to profile page
-      navigate('/profile');
+      // Create profile only if it doesn't exist
+      if (!existingProfile) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            { 
+              id: data.user.id,
+              email: data.user.email,
+              first_name: '',
+              last_name: '',
+              profile_picture: '',
+              role: 'candidate',
+              bio: '',
+              website: '',
+              linkedin: '',
+              github: '',
+              twitter: '',
+              created_at: new Date().toISOString()
+            }
+          ])
+          .single();
+        
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          throw profileError;
+        }
+
+        console.log('Profile created successfully:', profile);
+      } else {
+        console.log('Profile already exists:', existingProfile);
+      }
+
+      // Set success state
+      setSuccess(true);
     } catch (error) {
       console.error('Signup error:', error);
       setError(error.message || 'Failed to complete signup');
@@ -129,112 +159,122 @@ function CandidateSignup() {
               border: (theme) => `1px solid ${alpha(theme.palette.divider, 0.1)}`
             }}
           >
-            <Box component="form" onSubmit={handleSignUp} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <StyledTextField
-                label="Email Address"
-                name="email"
-                type="email"
-                fullWidth
-                required
-                value={formData.email}
-                onChange={handleChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email sx={{ color: 'text.secondary' }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              
-              <StyledTextField
-                label="Password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                fullWidth
-                required
-                value={formData.password}
-                onChange={handleChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock sx={{ color: 'text.secondary' }} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              {error && <div className="error-message">{error}</div>}
-
-              <Button
-                type="submit"
-                fullWidth
-                sx={{
-                  py: 1.5,
-                  borderRadius: 3,
-                  background: (theme) => `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
-                  color: 'white',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)',
-                  },
-                  '&:disabled': {
-                    background: (theme) => `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.5)} 30%, ${alpha(theme.palette.secondary.main, 0.5)} 90%)`,
-                    color: 'text.disabled',
-                    '&:hover': {
-                      transform: 'none',
-                      boxShadow: 'none'
-                    }
-                  }
-                }}
-                disabled={loading}
-              >
-                {loading ? 'Signing up...' : 'Sign Up'}
-              </Button>
-
-              <Typography variant="caption" sx={{ textAlign: 'center', color: 'text.secondary' }}>
-                By signing up, you agree to our Terms of Service and Privacy Policy
+            <Typography variant="h4" align="center" gutterBottom>
+              Candidate Sign Up
+            </Typography>
+            {success ? (
+              <Typography variant="body1" align="center" sx={{ mt: 2 }}>
+                We've sent a confirmation email to {formData.email}. 
+                Please check your inbox and click the confirmation link to complete your registration.
               </Typography>
+            ) : (
+              <Box component="form" onSubmit={handleSignUp} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <StyledTextField
+                  label="Email Address"
+                  name="email"
+                  type="email"
+                  fullWidth
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Email sx={{ color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                
+                <StyledTextField
+                  label="Password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  fullWidth
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Lock sx={{ color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
 
-              <Divider sx={{ my: 1 }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Already have an account?
-                </Typography>
-              </Divider>
+                {error && <div className="error-message">{error}</div>}
 
-              <Box sx={{ textAlign: 'center' }}>
-                <Link 
-                  href="/login" 
-                  sx={{ 
-                    color: 'primary.main',
-                    textDecoration: 'none',
+                <Button
+                  type="submit"
+                  fullWidth
+                  sx={{
+                    py: 1.5,
+                    borderRadius: 3,
+                    background: (theme) => `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+                    color: 'white',
                     fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                    transition: 'all 0.3s ease',
                     '&:hover': {
-                      textDecoration: 'underline'
+                      transform: 'translateY(-2px)',
+                      boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`
+                    },
+                    '&:active': {
+                      transform: 'translateY(0)',
+                    },
+                    '&:disabled': {
+                      background: (theme) => `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.5)} 30%, ${alpha(theme.palette.secondary.main, 0.5)} 90%)`,
+                      color: 'text.disabled',
+                      '&:hover': {
+                        transform: 'none',
+                        boxShadow: 'none'
+                      }
                     }
                   }}
+                  disabled={loading}
                 >
-                  Sign in here
-                </Link>
+                  {loading ? 'Signing up...' : 'Sign Up'}
+                </Button>
+
+                <Typography variant="caption" sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                  By signing up, you agree to our Terms of Service and Privacy Policy
+                </Typography>
+
+                <Divider sx={{ my: 1 }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    Already have an account?
+                  </Typography>
+                </Divider>
+
+                <Box sx={{ textAlign: 'center' }}>
+                  <Link 
+                    href="/login" 
+                    sx={{ 
+                      color: 'primary.main',
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                      '&:hover': {
+                        textDecoration: 'underline'
+                      }
+                    }}
+                  >
+                    Sign in here
+                  </Link>
+                </Box>
               </Box>
-            </Box>
+            )}
           </Paper>
         </motion.div>
       </Container>

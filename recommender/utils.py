@@ -31,13 +31,6 @@ def load_resumes():
     """Load resumes from MongoDB"""
     resumes_collection = mongo_db["resumes"]
     resumes = list(resumes_collection.find())
-    for resume in resumes:
-        dob = datetime.strptime(resume["dob"], "%Y-%m-%d")  # Parse the date of birth
-        today = datetime.today()
-        age = today.year - dob.year
-        if (today.month, today.day) < (dob.month, dob.day):
-            age -= 1
-        resume["age"] = age  # Add the age field to the resume
     return resumes
 
 def validate_resume(resume):

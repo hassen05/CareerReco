@@ -20,7 +20,7 @@ A web application that recommends the best resumes for a given job description u
 3. Install dependencies:
     
     pip install -r requirements.txt
-    python -m spacy download en_core_news_sm
+    python -m spacy download en_core_web_sm
     npm install @mui/icons-material framer-motion tsparticles react-tsparticles
     npm install react-tsparticles tsparticles-engine tsparticles
     npm install @supabase/supabase-js

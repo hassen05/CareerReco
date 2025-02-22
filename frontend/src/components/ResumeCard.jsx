@@ -105,18 +105,11 @@ const ResumeCard = ({ resume }) => {
                 {resume.name}
               </Typography>
             </Box>
-            <ScoreBadge label={`${resume.score.toFixed(1)} Match`} />
+            <ScoreBadge label={`${resume.score.toFixed(3)} Match`} />
           </CardHeader>
 
           <Stack spacing={2} sx={{ p: 3 }}>
             <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.1) }} />
-
-            {/* Age Field */}
-            {resume.age && (
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                <DetailChip>🎂 {resume.age} years</DetailChip>
-              </Stack>
-            )}
 
             <Section title="🎓 Education">
               <Typography variant="body2">{resume.education}</Typography>

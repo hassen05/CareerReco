@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { alpha, styled } from '@mui/material/styles';
-import { Visibility, VisibilityOff, Email, Lock, Person, Business } from '@mui/icons-material';
+import { Visibility, VisibilityOff, Email, Lock, Business } from '@mui/icons-material';
 import PageHero from '../components/PageHero';
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
@@ -39,8 +39,6 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 
 function RecruiterSignup() {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
     email: '',
     password: '',
     company: '',
@@ -81,31 +79,21 @@ function RecruiterSignup() {
             }}
           >
             <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <StyledTextField
-                  label="First Name"
-                  name="firstName"
-                  fullWidth
-                  required
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Person sx={{ color: 'text.secondary' }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <StyledTextField
-                  label="Last Name"
-                  name="lastName"
-                  fullWidth
-                  required
-                  value={formData.lastName}
-                  onChange={handleChange}
-                />
-              </Box>
+              <StyledTextField
+                label="Company Name"
+                name="company"
+                fullWidth
+                required
+                value={formData.company}
+                onChange={handleChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Business sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
               <StyledTextField
                 label="Email Address"
@@ -146,22 +134,6 @@ function RecruiterSignup() {
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              <StyledTextField
-                label="Company Name"
-                name="company"
-                fullWidth
-                required
-                value={formData.company}
-                onChange={handleChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Business sx={{ color: 'text.secondary' }} />
                     </InputAdornment>
                   ),
                 }}
