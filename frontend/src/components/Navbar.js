@@ -35,11 +35,11 @@ const Navbar = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const isMobileMenuOpen = Boolean(anchorEl);
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
   const navigate = useNavigate();
 
   const navLinks = [
     { label: "Home", path: "/" },
-    { label: "Find Candidates", path: "/recommend" },
     { label: "About", path: "/about" },
   ];
 
@@ -52,19 +52,26 @@ const Navbar = () => {
   };
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
+    const fetchUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
         setUser(user);
-      } catch (error) {
-        console.error('Error checking authentication:', error);
+        setUserRole(user.user_metadata?.role || 'candidate');
+      } else {
+        setUser(null);
+        setUserRole(null);
       }
     };
-
-    checkAuth();
+    fetchUserData();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+        setUserRole(session.user.user_metadata?.role || 'candidate');
+      } else {
+        setUser(null);
+        setUserRole(null);
+      }
     });
 
     return () => {
@@ -311,6 +318,24 @@ const Navbar = () => {
               gap: 2, 
               alignItems: 'center'
             }}>
+              {user && userRole === 'recruiter' && (
+                <Button
+                  color="primary"
+                  variant="text"
+                  onClick={() => navigate('/recommend')}
+                  sx={{
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                      color: 'primary.dark'
+                    }
+                  }}
+                >
+                  Find Candidates
+                </Button>
+              )}
               {user ? (
                 <>
                   <Button

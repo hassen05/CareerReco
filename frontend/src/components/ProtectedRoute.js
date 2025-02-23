@@ -1,32 +1,29 @@
-import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
-function ProtectedRoute({ children }) {
-  const [user, setUser] = useState(null);
+function ProtectedRoute({ children, requiredRole }) {
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-      } catch (error) {
-        console.error('Error checking authentication:', error);
-      } finally {
+    const fetchUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate('/login');
+      } else {
+        setUserRole(user.user_metadata?.role || 'candidate');
         setLoading(false);
       }
     };
+    fetchUserRole();
+  }, [navigate]);
 
-    checkAuth();
-  }, []);
+  if (loading) return <div>Loading...</div>;
 
-  if (loading) {
-    return null; // or a loading spinner
-  }
-
-  if (!user) {
-    return <Navigate to="/login" />;
+  if (requiredRole && userRole !== requiredRole) {
+    return <div>Access Denied</div>;
   }
 
   return children;

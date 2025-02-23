@@ -15,6 +15,8 @@ import { motion } from 'framer-motion';
 import { alpha, styled } from '@mui/material/styles';
 import { Visibility, VisibilityOff, Email, Lock, Business } from '@mui/icons-material';
 import PageHero from '../components/PageHero';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
@@ -44,14 +46,45 @@ function RecruiterSignup() {
     company: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
-    console.log('Recruiter signing up with:', formData);
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Sign up the user
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: 'http://localhost:3001/complete-profile',
+          data: { 
+            role: 'recruiter',
+            account_type: 'recruiter',
+            company: formData.company
+          }
+        }
+      });
+
+      if (error) throw error;
+      if (!data.user) throw new Error('User object is undefined');
+
+      // Set success state and show confirmation message
+      setSuccess(true);
+    } catch (error) {
+      setError(error.message || 'Failed to complete signup');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,114 +111,135 @@ function RecruiterSignup() {
               border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
             }}
           >
-            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <StyledTextField
-                label="Company Name"
-                name="company"
-                fullWidth
-                required
-                value={formData.company}
-                onChange={handleChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Business sx={{ color: 'text.secondary' }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              <StyledTextField
-                label="Email Address"
-                name="email"
-                type="email"
-                fullWidth
-                required
-                value={formData.email}
-                onChange={handleChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email sx={{ color: 'text.secondary' }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              
-              <StyledTextField
-                label="Password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                fullWidth
-                required
-                value={formData.password}
-                onChange={handleChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock sx={{ color: 'text.secondary' }} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              <Button
-                type="submit"
-                fullWidth
-                sx={{
-                  py: 1.5,
-                  borderRadius: 3,
-                  background: (theme) => `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
-                  color: 'white',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)',
-                  }
-                }}
-              >
-                Sign Up
-              </Button>
-
-              <Typography variant="caption" sx={{ textAlign: 'center', color: 'text.secondary' }}>
-                By signing up, you agree to our Terms of Service and Privacy Policy
+            {success ? (
+              <Typography variant="body1" align="center" sx={{ mt: 2 }}>
+                We've sent a confirmation email to {formData.email}. 
+                Please check your inbox and click the confirmation link to complete your registration.
               </Typography>
-
-              <Divider sx={{ my: 1 }}>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Already have an account?
-                </Typography>
-              </Divider>
-
-              <Box sx={{ textAlign: 'center' }}>
-                <Link 
-                  href="/login" 
-                  sx={{ 
-                    color: 'primary.main',
-                    textDecoration: 'none',
-                    fontWeight: 600
+            ) : (
+              <Box component="form" onSubmit={handleSignUp} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <StyledTextField
+                  label="Company Name"
+                  name="company"
+                  fullWidth
+                  required
+                  value={formData.company}
+                  onChange={handleChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Business sx={{ color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
                   }}
+                />
+
+                <StyledTextField
+                  label="Email Address"
+                  name="email"
+                  type="email"
+                  fullWidth
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Email sx={{ color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                
+                <StyledTextField
+                  label="Password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  fullWidth
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Lock sx={{ color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                {error && <Typography color="error">{error}</Typography>}
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  sx={{
+                    py: 1.5,
+                    borderRadius: 3,
+                    background: (theme) => `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+                    color: 'white',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`
+                    },
+                    '&:active': {
+                      transform: 'translateY(0)',
+                    },
+                    '&:disabled': {
+                      background: (theme) => `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.5)} 30%, ${alpha(theme.palette.secondary.main, 0.5)} 90%)`,
+                      color: 'text.disabled',
+                      '&:hover': {
+                        transform: 'none',
+                        boxShadow: 'none'
+                      }
+                    }
+                  }}
+                  disabled={loading}
                 >
-                  Sign In
-                </Link>
+                  {loading ? 'Signing up...' : 'Sign Up'}
+                </Button>
+
+                <Typography variant="caption" sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                  By signing up, you agree to our Terms of Service and Privacy Policy
+                </Typography>
+
+                <Divider sx={{ my: 1 }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    Already have an account?
+                  </Typography>
+                </Divider>
+
+                <Box sx={{ textAlign: 'center' }}>
+                  <Link 
+                    href="/login" 
+                    sx={{ 
+                      color: 'primary.main',
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                      '&:hover': {
+                        textDecoration: 'underline'
+                      }
+                    }}
+                  >
+                    Sign in here
+                  </Link>
+                </Box>
               </Box>
-            </Box>
+            )}
           </Paper>
         </motion.div>
       </Container>
@@ -193,4 +247,4 @@ function RecruiterSignup() {
   );
 }
 
-export default RecruiterSignup; 
+export default RecruiterSignup;

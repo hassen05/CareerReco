@@ -40,7 +40,14 @@ function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/recommend" element={<ResumeRecommender />} />
+        <Route 
+          path="/recommend" 
+          element={
+            <ProtectedRoute requiredRole="recruiter">
+              <ResumeRecommender />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/signup" element={<RoleSelection />} />
@@ -79,6 +86,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        
       </Routes>
       <Footer />
     </ThemeProvider>

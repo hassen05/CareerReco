@@ -15,14 +15,24 @@ import { PhotoCamera } from '@mui/icons-material';
 function CompleteProfilePage() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    profilePicture: null
+    profilePicture: null,
+    company: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [userRole, setUserRole] = useState(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const getUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserRole(user.user_metadata?.role || 'candidate');
+      }
+    };
+    getUserRole();
+  }, []);
 
   const handleNext = () => {
     setStep(step + 1);
@@ -65,14 +75,26 @@ function CompleteProfilePage() {
       
       if (!user) throw new Error('User not found');
 
+      // Determine which table to update based on user role
+      const tableName = userRole === 'recruiter' ? 'recruiter_profiles' : 'profiles';
+      const profileData = {
+        id: user.id,
+        email: user.email,
+        profile_picture: formData.profilePicture
+      };
+
+      // Add company field for recruiters
+      if (userRole === 'recruiter') {
+        profileData.company = formData.company;
+      } else {
+        // For candidates, keep first and last name
+        profileData.first_name = formData.firstName;
+        profileData.last_name = formData.lastName;
+      }
+
       const { error } = await supabase
-        .from('profiles')
-        .update({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          profile_picture: formData.profilePicture
-        })
-        .eq('id', user.id);
+        .from(tableName)
+        .upsert(profileData);
 
       if (error) throw error;
 
@@ -92,28 +114,45 @@ function CompleteProfilePage() {
 
       {step === 1 && (
         <Box component="form" sx={{ mt: 4 }}>
-          <TextField
-            fullWidth
-            label="First Name"
-            value={formData.firstName}
-            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-            margin="normal"
-            required
-          />
-          <TextField
-            fullWidth
-            label="Last Name"
-            value={formData.lastName}
-            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-            margin="normal"
-            required
-          />
+          {userRole === 'recruiter' ? (
+            <TextField
+              fullWidth
+              label="Company Name"
+              value={formData.company}
+              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+              margin="normal"
+              required
+            />
+          ) : (
+            <>
+              <TextField
+                fullWidth
+                label="First Name"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                margin="normal"
+                required
+              />
+              <TextField
+                fullWidth
+                label="Last Name"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                margin="normal"
+                required
+              />
+            </>
+          )}
           <Button
             fullWidth
             variant="contained"
             sx={{ mt: 3 }}
             onClick={handleNext}
-            disabled={!formData.firstName || !formData.lastName}
+            disabled={
+              userRole === 'recruiter' 
+                ? !formData.company 
+                : !formData.firstName || !formData.lastName
+            }
           >
             Continue
           </Button>

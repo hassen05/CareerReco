@@ -38,6 +38,8 @@ function CandidateSignup() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    firstName: '',
+    lastName: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -63,72 +65,33 @@ function CandidateSignup() {
           emailRedirectTo: 'http://localhost:3001/complete-profile',
           data: { 
             role: 'candidate',
-            account_type: 'candidate'
+            account_type: 'candidate',
+            first_name: formData.firstName,
+            last_name: formData.lastName
           }
         }
       });
 
-      console.log('Full Supabase response:', { data, error });
-      
-      if (error) {
-        console.error('Supabase signup error:', error);
-        throw error;
-      }
+      if (error) throw error;
+      if (!data.user) throw new Error('User object is undefined');
 
-      if (!data.user) {
-        throw new Error('User object is undefined');
-      }
-
-      console.log('User created successfully:', data.user);
-
-      // Check if profile already exists
-      const { data: existingProfile, error: profileFetchError } = await supabase
+      // Create initial profile
+      const { error: profileError } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
+        .insert([
+          { 
+            id: data.user.id,
+            email: data.user.email,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            created_at: new Date().toISOString()
+          }
+        ]);
 
-      if (profileFetchError && profileFetchError.code !== 'PGRST116') { // Ignore "No rows found" error
-        console.error('Error fetching profile:', profileFetchError);
-        throw profileFetchError;
-      }
+      if (profileError) throw profileError;
 
-      // Create profile only if it doesn't exist
-      if (!existingProfile) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            { 
-              id: data.user.id,
-              email: data.user.email,
-              first_name: '',
-              last_name: '',
-              profile_picture: '',
-              role: 'candidate',
-              bio: '',
-              website: '',
-              linkedin: '',
-              github: '',
-              twitter: '',
-              created_at: new Date().toISOString()
-            }
-          ])
-          .single();
-        
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          throw profileError;
-        }
-
-        console.log('Profile created successfully:', profile);
-      } else {
-        console.log('Profile already exists:', existingProfile);
-      }
-
-      // Set success state
       setSuccess(true);
     } catch (error) {
-      console.error('Signup error:', error);
       setError(error.message || 'Failed to complete signup');
     } finally {
       setLoading(false);
