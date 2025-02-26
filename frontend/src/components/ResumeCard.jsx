@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { styled, alpha } from '@mui/system';
+import { useNavigate } from 'react-router-dom';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius * 3,
@@ -76,6 +77,7 @@ const AndMoreChip = styled(Box)(({ theme }) => ({
 }));
 
 const ResumeCard = ({ resume }) => {
+  const navigate = useNavigate();
   const theme = useTheme();
   const MAX_SKILLS = 3;  // Maximum number of skills to show
   const MAX_CERTS = 2;   // Maximum number of certifications to show
@@ -88,6 +90,12 @@ const ResumeCard = ({ resume }) => {
     ? `${resume.education[0].degree} at ${resume.education[0].institution}`
     : 'No education information available';
 
+  const handleCardClick = () => {
+    if (resume.user_id) {
+      navigate(`/profile/${resume.user_id}`);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -95,7 +103,15 @@ const ResumeCard = ({ resume }) => {
       transition={{ duration: 0.4 }}
       style={{ height: '100%' }}
     >
-      <StyledCard>
+      <StyledCard 
+        onClick={handleCardClick}
+        sx={{ 
+          cursor: 'pointer',
+          '&:hover': {
+            boxShadow: `0 12px 45px -10px ${alpha(theme.palette.primary.main, 0.3)}`
+          }
+        }}
+      >
         <CardContent sx={{ flex: 1 }}>
           <CardHeader>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

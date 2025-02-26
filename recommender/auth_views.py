@@ -4,6 +4,7 @@ from rest_framework import status
 from .supabase_client import supabase
 import logging
 from datetime import datetime
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,19 @@ class SignUpView(APIView):
             return Response({
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def create_recruiter_profile(self, user, profile_data):
+        supabase = create_client(
+            url=os.getenv("SUPABASE_URL"),
+            key=os.getenv("SUPABASE_ANON_KEY"),
+        )
+        supabase.table('recruiter_profiles').insert({
+            'id': user.id,
+            'company_name': profile_data.get('company_name'),
+            'website': profile_data.get('website'),
+            'company_size': profile_data.get('company_size'),
+            'industry': profile_data.get('industry')
+        }).execute()
 
 class LoginView(APIView):
     def post(self, request):

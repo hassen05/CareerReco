@@ -7,7 +7,7 @@ migrations/
 db.sqlite3
 media/
 staticfiles/
-
+managment/
 # Virtual environment
 venv/
 .env

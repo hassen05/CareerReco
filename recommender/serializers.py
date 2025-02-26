@@ -3,7 +3,7 @@ from datetime import date
 
 class ResumeSerializer(serializers.Serializer):
     id = serializers.CharField()
-    user_id = serializers.CharField()
+    user_id = serializers.UUIDField()
     name = serializers.CharField()
     email = serializers.EmailField()
     phone = serializers.CharField()

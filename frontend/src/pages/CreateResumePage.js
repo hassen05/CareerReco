@@ -161,7 +161,7 @@ const CreateResumePage = () => {
       const embeddingData = {
         education: resumeData.education.map(edu => ({
           degree: edu.degree,
-          institute: edu.institution
+          institution: edu.institution
         })),
         skills: resumeData.skills,
         experience: resumeData.experience,

@@ -88,28 +88,27 @@ def load_resumes():
     """Load resumes from Supabase with enhanced embedding text"""
     try:
         # Fetch resumes
-        resumes_response = supabase.table('resumes').select('*').execute()
+        resumes_response = supabase.table('resumes_duplicate').select('*').execute()
         resumes = resumes_response.data
 
-        # Fetch profiles
-        profiles_response = supabase.table('profiles').select('*').execute()
-        profiles = profiles_response.data
+        if not resumes:
+            logger.warning("No resumes found in resumes_duplicate table")
+            return []
 
-        # Join resumes with profiles
+        # Add default values for test resumes
         for resume in resumes:
-            profile = next((p for p in profiles if p['id'] == resume['user_id']), None)
-            if profile:
-                resume['name'] = f"{profile.get('first_name', '')} {profile.get('last_name', '')}"
-                resume['email'] = profile.get('email', '')
-                resume['phone'] = profile.get('phone', '')
-                resume['address'] = profile.get('address', '')
-                
+            resume['name'] = resume.get('name', 'Test Candidate')
+            resume['email'] = resume.get('email', 'test@example.com')
+            resume['phone'] = resume.get('phone', '000-0000')
+            resume['address'] = resume.get('address', 'Unknown')
 
         # Decode Base64 embeddings
         for resume in resumes:
-            if resume.get('embedding'):
+            if resume.get('embedding') and isinstance(resume['embedding'], str):
                 embedding_bytes = base64.b64decode(resume['embedding'])
                 resume['embedding'] = np.frombuffer(embedding_bytes, dtype='float32')
+            else:
+                logger.warning(f"Resume {resume.get('id')} has invalid/missing embedding")
 
         # Ensure education is properly formatted
         for resume in resumes:

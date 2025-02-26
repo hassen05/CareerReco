@@ -18,6 +18,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import CompleteProfilePage from './pages/CompleteProfilePage';
 import CreateResumePage from './pages/CreateResumePage';
 import EditProfilePage from './pages/EditProfilePage';
+import PublicProfilePage from './pages/PublicProfilePage';
 import { supabase } from './supabaseClient';
 
 function App() {
@@ -86,7 +87,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
+        <Route path="/profile/:user_id" element={<PublicProfilePage />} />
       </Routes>
       <Footer />
     </ThemeProvider>

@@ -83,7 +83,8 @@ const SearchForm = ({ onSubmit, loading }) => {
             fullWidth
             multiline
             rows={4}
-            placeholder="Paste your job description here..."
+            label="Put job desciption here:"
+            placeholder="Example: We're looking for a Full Stack Developer with 3+ years experience in React and Node.js. The ideal candidate should have strong skills in JavaScript, TypeScript, and REST API development. Experience with cloud platforms like AWS or Azure is a plus. Responsibilities will include designing and implementing scalable web applications, collaborating with cross-functional teams, and maintaining code quality through testing and code reviews."
             value={jobDesc}
             onChange={(e) => setJobDesc(e.target.value)}
             required

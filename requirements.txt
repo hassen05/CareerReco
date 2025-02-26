@@ -1,8 +1,6 @@
 Django
 djangorestframework
-djongo
 numpy
-pymongo
 scikit_learn
 sentence_transformers
 spacy
