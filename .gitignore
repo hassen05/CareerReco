@@ -11,7 +11,8 @@ managment/
 # Virtual environment
 venv/
 .env
-
+.csv
+precomputed_embeddings/
 # IDE/Editor
 .vscode/
 .idea/
