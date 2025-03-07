@@ -11,12 +11,19 @@ import {
   Fab,
   useScrollTrigger,
   Zoom,
-  Fade
+  Fade,
+  Paper,
+  Divider,
+  Chip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
-import { KeyboardArrowUp } from '@mui/icons-material'; // Import scroll-to-top icon
+import { KeyboardArrowUp, ExpandMore, FilterList, Check } from '@mui/icons-material';
 import SearchForm from '../components/SearchForm';
 import ResumeCard from '../components/ResumeCard.jsx';
 import PageHero from '../components/PageHero';
+import { alpha } from '@mui/material/styles';
 
 // Debounce function
 const useDebounce = (value, delay) => {
@@ -69,26 +76,27 @@ function ResumeRecommender() {
   const [error, setError] = useState(null);
   const [jobDesc, setJobDesc] = useState("");
   const [topN, setTopN] = useState(5);
+  
   const debouncedJobDesc = useDebounce(jobDesc, 300);  // 300ms delay
 
   // Fetch recommendations when debouncedJobDesc changes
   useEffect(() => {
     if (debouncedJobDesc) {
-      console.log("Fetching recommendations for:", debouncedJobDesc);  // Debug
+      console.log("Fetching recommendations for:", debouncedJobDesc);
       setLoading(true);
       setError(null);
-
-      axios.post("http://localhost:8000/api/recommend/", { 
+      
+      axios.post("http://localhost:8000/api/recommend/", {
         job_description: debouncedJobDesc,
-        top_n: topN,
+        top_n: topN
       })
         .then((response) => {
-          console.log("API Response:", response.data);  // Debug
+          console.log("API Response:", response.data);
           setRecommendations(response.data);
           setLoading(false);
         })
         .catch((error) => {
-          console.error("API Error:", error);  // Debug
+          console.error("API Error:", error);
           setError("An error occurred while fetching recommendations.");
           setLoading(false);
         });
@@ -113,15 +121,15 @@ function ResumeRecommender() {
         title="Smart Recommendations" 
         subtitle="Find your perfect candidates with AI-powered matching"
         image="/PageHeader.jpg"
-        titleColor="white"  // Custom prop (if supported)
-        subtitleColor="white"  // Custom prop (if supported)
+        titleColor="white"
+        subtitleColor="white"
       />
 
       {/* Main Content */}
       <Container maxWidth="lg" sx={{ py: 6 }}>
         {/* Search Form */}
         <Box sx={{ mb: 6 }}>
-          <SearchForm onSubmit={handleSearch} />
+          <SearchForm onSubmit={handleSearch} enableFilters={false} />
         </Box>
 
         {/* Loading State */}

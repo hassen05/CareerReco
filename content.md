@@ -26,10 +26,10 @@ ResumeRec is an innovative AI-powered recruitment platform designed to revolutio
 - Axios for API communication
 
 ### Backend
-- Python with FastAPI framework
+- Python with Django REST framework
 - Machine learning models for resume analysis and matching
-- PostgreSQL database
-- Redis for caching
+- Supabase for authentication and data storage
+- Vector embeddings for semantic search
 
 ### AI/ML Components
 - Natural Language Processing (NLP) for resume parsing
@@ -39,61 +39,8 @@ ResumeRec is an innovative AI-powered recruitment platform designed to revolutio
 
 ## Database Architecture
 
-### Resume Database
-- **MongoDB**: Chosen for its flexibility in handling unstructured resume data
-- **Current Data Structure** (from merged_resumes.json):
-```json
-{
-  "id": String,
-  "name": String,
-  "email": String,
-  "phone": String,
-  "address": String,
-  "education": String,
-  "skills": [String],
-  "experience": [
-    {
-      "company": String,
-      "position": String,
-      "years": Number,
-      "responsibilities": [String]
-    }
-  ],
-  "languages": [String],
-  "dob": String, // Date in YYYY-MM-DD format
-  "certifications": [String]
-}
-```
-
-### Recommended MongoDB Schema
-```javascript
-{
-  _id: ObjectId,
-  personalInfo: {
-    name: String,
-    email: { type: String, unique: true },
-    phone: String,
-    address: String,
-    dob: Date
-  },
-  education: String,
-  skills: [String],
-  experience: [{
-    company: String,
-    position: String,
-    startDate: Date,
-    endDate: Date,
-    responsibilities: [String]
-  }],
-  languages: [String],
-  certifications: [String],
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### Authentication with Supabase
-We'll use Supabase Auth for user management with the following schema:
+### Authentication and Storage with Supabase
+We use Supabase for user management and data storage with the following schema:
 
 ```sql
 CREATE TABLE profiles (
@@ -101,54 +48,109 @@ CREATE TABLE profiles (
   first_name TEXT,
   last_name TEXT,
   phone TEXT,
-  address TEXT,
+  bio TEXT,
   profile_picture TEXT, -- URL to the profile picture in Supabase Storage
+  company TEXT,
+  job_title TEXT,
+  website TEXT,
+  linkedin TEXT,
+  github TEXT,
+  twitter TEXT,
   role TEXT CHECK (role IN ('candidate', 'recruiter')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE resumes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES profiles(id),
+  education JSONB,
+  skills TEXT[],
+  experience JSONB,
+  languages TEXT[],
+  certifications TEXT[],
+  embedding VECTOR(384),
+  embedding_text TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
-### Integration Strategy
-1. **Profile Picture Storage**:
-   - Use Supabase Storage for profile pictures
-   - Store the URL in the Supabase profiles table
-   - Implement image upload endpoint using Supabase Storage API
+## Strategic Enhancements Roadmap
 
-2. **Data Relationships**:
-   - Link resumes to users via Supabase user ID
-   - Add reference to user in resume documents:
-     ```javascript
-     {
-       _id: ObjectId,
-       userId: String, // Supabase user ID
-       ... // rest of resume fields
-     }
-     ```
+### 1. Interactive Dashboard
+A personalized dashboard for both candidates and recruiters showing:
 
-3. **Search Optimization**:
-   - Implement text indexes for full-text search in MongoDB:
-     ```javascript
-     db.resumes.createIndex({
-       'personalInfo.name': 'text',
-       skills: 'text',
-       'experience.position': 'text'
-     })
-     ```
+- Job application status tracker
+- Recent activity feed 
+- Key metrics (profile views, application success rate)
+- Recommended actions to improve profile/job listings
 
-4. **Data Security**:
-   - Use Supabase Auth for secure authentication
-   - Implement field-level encryption for sensitive data in MongoDB
-   - Use MongoDB's built-in access control
-   - Enable auditing for data access tracking
+### 2. AI Interview Preparation
+- Mock interview simulator with AI feedback
+- Common questions for specific roles
+- Real-time feedback on answers
+- Video recording capabilities for self-review
+
+### 3. Smart Job Matching for Candidates
+- Personalized job recommendations based on candidate profiles
+- "Job fit score" showing match percentage
+- Skill gap analysis with learning resources
+- Customizable job alerts
+
+### 4. In-Platform Messaging System
+- Secure messaging between candidates and recruiters
+- Interview scheduling capabilities
+- Template messages for common scenarios
+- Read receipts and typing indicators
+
+### 5. Career Progression Tools
+- Skill development tracking
+- Career path visualization
+- Personalized learning recommendations
+- Salary insights and negotiation tips
+
+### 6. Advanced Analytics for Recruiters
+- Candidate pipeline visualization
+- Time-to-hire metrics
+- Source effectiveness analysis
+- Team performance dashboards
+
+### 7. Community and Networking Features
+- Industry forums and discussion groups
+- Peer resume reviews
+- Mentorship matching
+- Virtual networking events
+
+### 8. Mobile Application
+- Native mobile experience for on-the-go access
+- Push notifications for job matches and messages
+- Easy document uploads from mobile devices
+- Interview reminders and calendar integration
+
+## Technical Improvement Priorities
+
+### 1. Improved Search Functionality
+- Vector database integration for semantic search
+- Advanced filtering options with weighted parameters
+- Search query optimization for faster results
+
+### 2. Performance Optimization
+- Server-side rendering for faster initial loads
+- Implement caching strategies for recommendation engine
+- Lazy loading for performance-intensive components
+
+### 3. Enhanced Security
+- Two-factor authentication
+- Document encryption for sensitive resume data
+- Compliance tooling for GDPR/CCPA
 
 ## Environment Variables
 Update the `.env` file to include Supabase credentials and storage bucket name:
 ```
 SUPABASE_URL=your-supabase-url
 SUPABASE_KEY=your-supabase-anon-key
-SUPABASE_STORAGE_BUCKET=profile-pictures
-MONGO_URI=mongodb://localhost:27017/resumerec
+SUPABASE_STORAGE_BUCKET=avatars
 SECRET_KEY=your-secret-key
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -190,11 +192,14 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
    ```
 5. Start the server:
    ```bash
-   uvicorn main:app --reload
+   python manage.py runserver
    ```
 
 ## API Documentation
-The backend API is documented using Swagger UI. After starting the backend server, access the documentation at:
+The backend API is documented using Django REST framework's built-in API documentation. After starting the backend server, access the documentation at:
+```
+http://localhost:8000/api/docs/
+```
 
 ## Testing
 Run tests for both frontend and backend:
@@ -208,7 +213,7 @@ npm test
 ### Backend Tests
 ```bash
 cd backend
-pytest
+python manage.py test
 ```
 
 ## Deployment
@@ -243,6 +248,4 @@ We welcome contributions! Please follow these steps:
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contact
-For any inquiries, please contact:
-- Project Lead: [Your Name] ([your.email@example.com])
-- Technical Lead: [Technical Lead Name] ([tech.lead@example.com]) 
+For any inquiries, please contact the project team through GitHub issues. 

@@ -8,3 +8,4 @@ supabase
 openai
 tenacity
 django-cors-headers
+nltk

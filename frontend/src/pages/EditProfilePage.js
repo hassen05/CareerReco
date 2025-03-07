@@ -10,6 +10,7 @@ import { useTheme } from '@mui/material/styles';
 
 function EditProfilePage() {
   const [profile, setProfile] = useState({
+    id: '',
     first_name: '',
     last_name: '',
     phone: '',
@@ -43,6 +44,7 @@ function EditProfilePage() {
           if (error) throw error;
 
           setProfile({
+            id: user.id,
             first_name: profile.first_name || '',
             last_name: profile.last_name || '',
             phone: profile.phone || '',
@@ -71,27 +73,29 @@ function EditProfilePage() {
     if (!file) return;
 
     setUploading(true);
+    setError(null);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.id}.${fileExt}`;
+      const timestamp = new Date().getTime();
+      const fileName = `${profile.id}_${timestamp}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      // Upload the file
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          upsert: true
+        });
 
       if (uploadError) throw uploadError;
 
-      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
-      // Update local state
       setProfile(prev => ({ ...prev, profile_picture: publicUrl }));
     } catch (error) {
-      setError(error.message);
+      console.error('Upload error:', error);
+      setError(`Upload failed: ${error.message || 'Unknown error'}`);
     } finally {
       setUploading(false);
     }
@@ -127,7 +131,7 @@ function EditProfilePage() {
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      setError('Failed to update profile. Please try again later.');
+      setError(`Failed to update profile: ${error.message}`);
     } finally {
       setSaving(false);
     }

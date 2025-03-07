@@ -14,6 +14,12 @@ from datetime import datetime
 from supabase import create_client
 from django.conf import settings
 import base64
+import re
+from collections import Counter
+from nltk.util import ngrams
+from nltk.corpus import stopwords
+from string import punctuation
+from sklearn.feature_extraction.text import CountVectorizer
 
 # Load models
 nlp = spacy.load("en_core_web_sm")
@@ -279,24 +285,268 @@ def score_resume(resume, job_embedding):
         logger.error(f'Error scoring resume: {str(e)}')
         return resume, 0
 
-def recommend_resumes(job_desc, resumes, top_n=5):
+def extract_keywords_and_requirements(text):
+    """Extract job requirements using advanced NLP techniques without domain-specific hardcoding"""
+    
+    # 1. Use NLP to find requirements based on linguistic patterns
+    doc = nlp(text.lower())
+    
+    # Collect noun phrases that follow skill indicators
+    skill_indicators = ['experience in', 'knowledge of', 'skilled in', 'proficient with', 
+                       'familiar with', 'expertise in', 'background in', 'ability to']
+    
+    skills = []
+    
+    # Extract based on skill indicators
+    for indicator in skill_indicators:
+        idx = text.lower().find(indicator)
+        if idx >= 0:
+            # Extract a meaningful chunk following the indicator
+            end_idx = min(idx + len(indicator) + 100, len(text))
+            fragment = text[idx + len(indicator):end_idx]
+            fragment_doc = nlp(fragment)
+            
+            # Get noun phrases (more meaningful than single nouns)
+            for chunk in fragment_doc.noun_chunks:
+                if len(chunk.text) > 2:
+                    skills.append(chunk.text.strip())
+    
+    # 2. Extract years of experience using regex
+    experience_pattern = r'(\d+)[\+]?\s+years?(?:\s+of)?(?:\s+experience)?'
+    years_required = re.findall(experience_pattern, text.lower())
+    years = max([int(y) for y in years_required]) if years_required else 0
+    
+    # 3. Use statistical keyword extraction for remaining skills
+    # This uses term frequency to identify domain-relevant terms
+    # without requiring predefined lists
+    
+    # Clean text for keyword extraction
+    cleaned_text = " ".join([token.lemma_ for token in doc 
+                           if not token.is_stop and not token.is_punct])
+    
+    # Extract keywords using n-grams (1-3 word phrases)
     try:
-        # Generate job embedding using enhanced text
-        job_embedding = model.encode(job_desc).astype('float32')
+        # Configure CountVectorizer for keyword extraction
+        count_vectorizer = CountVectorizer(
+            ngram_range=(1, 3),  # Use 1-3 word phrases
+            stop_words='english',
+            min_df=1,  # Minimum document frequency
+            max_features=50  # Extract top 50 features
+        )
+        
+        # Fit and transform the text
+        count_data = count_vectorizer.fit_transform([cleaned_text])
+        
+        # Get the most common terms
+        words = count_vectorizer.get_feature_names_out()
+        count_values = count_data.toarray().flatten()
+        
+        # Create a dictionary of term frequencies
+        term_frequencies = dict(zip(words, count_values))
+        
+        # Sort by frequency and add to skills
+        sorted_keywords = sorted(term_frequencies.items(), key=lambda x: x[1], reverse=True)
+        for keyword, _ in sorted_keywords[:20]:  # Take top 20
+            if len(keyword) > 3 and keyword not in [s.lower() for s in skills]:
+                skills.append(keyword)
+    
+    except Exception as e:
+        logger.error(f"Error in keyword extraction: {str(e)}")
+    
+    # 4. Extract education requirements using dependency parsing - WITH IMPROVED DETECTION
+    education_terms = []
+    education_mentioned = False  # Flag to track if education is mentioned at all
+    education_indicators = ['degree', 'bachelor', 'master', 'phd', 'diploma', 'certification', 'graduated', 'university']
+    education_requirement_phrases = ['degree required', 'must have degree', 'education required', 'degree in', 'qualified with']
+    
+    # First check if any education requirement phrases exist
+    if any(phrase in text.lower() for phrase in education_requirement_phrases):
+        education_mentioned = True
+    
+    for sent in doc.sents:
+        if any(edu in sent.text.lower() for edu in education_indicators):
+            # Found education-related sentence
+            education_mentioned = True
+            for token in sent:
+                if token.text.lower() in education_indicators:
+                    # Get the full education requirement phrase
+                    phrase = ' '.join([t.text for t in token.subtree])
+                    education_terms.append(phrase)
+    
+    # Find the highest education level mentioned
+    education_level = 'none'
+    if education_mentioned:
+        if any(term for term in education_terms if 'phd' in term.lower() or 'doctor' in term.lower()):
+            education_level = 'phd'
+        elif any(term for term in education_terms if 'master' in term.lower() or 'msc' in term.lower() or 'ms ' in term.lower()):
+            education_level = 'masters'
+        elif any(term for term in education_terms if 'bachelor' in term.lower() or 'bs ' in term.lower() or 'ba ' in term.lower()):
+            education_level = 'bachelors'
+        elif education_terms:  # If other education terms found
+            education_level = 'other'
+    
+    # 5. Extract required languages (human languages, not programming)
+    language_entities = [ent.text for ent in doc.ents if ent.label_ == 'LANGUAGE']
+    
+    # Compile all requirements
+    requirements = {
+        'skills': list(set(skills)),
+        'years_experience': years,
+        'education_level': education_level,
+        'education_mentioned': education_mentioned,  # New flag to indicate if education was mentioned
+        'education_terms': education_terms,
+        'languages': language_entities,
+        'full_text': text
+    }
+    
+    return requirements
+
+def recommend_resumes(job_desc, resumes, top_n=5):
+    """Match resumes to job description using NLP and provide match reasons"""
+    try:
+        start_time = time.time()
+        
+        # Extract requirements from job description
+        job_requirements = extract_keywords_and_requirements(job_desc)
+        logger.info(f"Extracted requirements: {job_requirements}")
+        
+        # Generate job description embedding for semantic matching
+        job_embedding = model.encode(job_desc)
         
         scores = []
         for resume in resumes:
-            if resume.get('embedding') is not None and np.size(resume['embedding']) > 0:
-                # Use the precomputed enhanced embedding
-                resume_embedding = np.array(resume['embedding'], dtype='float32')
-                similarity = cosine_similarity([job_embedding], [resume_embedding])[0][0]
-                scores.append((resume, similarity))
+            try:
+                if resume.get('embedding') is None or np.size(resume['embedding']) == 0:
+                    continue
+                
+                # 1. Calculate semantic similarity score
+                resume_embedding = np.array(resume['embedding'])
+                semantic_score = cosine_similarity([job_embedding], [resume_embedding])[0][0]
+                
+                # 2. Gather match reasons based on requirements
+                match_reasons = []
+                resume_skills = resume.get('skills', [])
+                
+                # Add skill matches to reasons
+                skill_matches = []
+                for resume_skill in resume_skills:
+                    for job_skill in job_requirements['skills']:
+                        # Check for skill match (case insensitive substring match)
+                        if job_skill.lower() in resume_skill.lower() or resume_skill.lower() in job_skill.lower():
+                            skill_matches.append(resume_skill)
+                            match_reasons.append(f"Has required skill: {resume_skill}")
+                            break
+                
+                # Calculate skill match score
+                skill_score = len(skill_matches) / len(job_requirements['skills']) if job_requirements['skills'] else 0
+                
+                # Check years of experience
+                req_years = job_requirements['years_experience']
+                candidate_years = calculate_total_experience(resume.get('experience', []))
+                
+                if req_years > 0 and candidate_years >= req_years:
+                    match_reasons.append(f"Has {int(candidate_years)} years of experience (required: {req_years})")
+                    experience_score = min(candidate_years / req_years, 1.5)  # Cap at 1.5x
+                else:
+                    experience_score = min(candidate_years / max(1, req_years), 1.0)
+                
+                # Check education level - UPDATED LOGIC
+                candidate_education = get_highest_education(resume.get('education', []))
+                edu_score = calculate_education_score(candidate_education, job_requirements['education_level'])
+                
+                # Only add education as a match reason if education was explicitly mentioned
+                if job_requirements.get('education_mentioned', False) and edu_score > 0.7:
+                    for edu in resume.get('education', []):
+                        degree = edu.get('degree', 'degree')
+                        institution = edu.get('institution', 'institution')
+                        match_reasons.append(f"Has {degree} from {institution}")
+                        break
+                
+                # Calculate final score with weights
+                final_score = (
+                    semantic_score * 0.4 +   # Semantic similarity
+                    skill_score * 0.3 +      # Skill match
+                    experience_score * 0.2 + # Experience match
+                    edu_score * 0.1          # Education match
+                )
+                
+                # Add match reasons and score to resume
+                resume_with_reasons = resume.copy()
+                resume_with_reasons['match_reasons'] = match_reasons
+                resume_with_reasons['score'] = float(final_score)
+                
+                scores.append((resume_with_reasons, final_score))
+                
+            except Exception as e:
+                logger.error(f"Error scoring resume {resume.get('id')}: {str(e)}")
         
+        # Sort by score and return top N
         scores.sort(key=lambda x: x[1], reverse=True)
-        return scores[:top_n]
+        
+        end_time = time.time()
+        logger.info(f"Recommendation took {end_time - start_time:.2f} seconds")
+        
+        return [resume for resume, _ in scores[:top_n]]
     except Exception as e:
         logger.error(f"Error in recommendation: {str(e)}")
         return []
+
+def calculate_total_experience(experiences):
+    """Calculate total years of experience from experience entries"""
+    total_years = 0
+    for exp in experiences:
+        # Handle different formats that might exist in the data
+        if 'years' in exp:
+            try:
+                total_years += float(exp.get('years', 0))
+            except (ValueError, TypeError):
+                pass
+        elif 'start_date' in exp:
+            try:
+                start = datetime.strptime(exp['start_date'], '%Y-%m-%d')
+                end = datetime.strptime(exp.get('end_date', datetime.now().strftime('%Y-%m-%d')), '%Y-%m-%d')
+                total_years += (end - start).days / 365
+            except (ValueError, TypeError):
+                pass
+    return total_years
+
+def get_highest_education(education_entries):
+    """Determine highest education level from education entries"""
+    highest = 'none'
+    for edu in education_entries:
+        degree = edu.get('degree', '').lower()
+        if 'phd' in degree or 'doctor' in degree:
+            return 'phd'  # PhD is highest
+        elif ('master' in degree or 'msc' in degree or 'ms ' in degree) and highest != 'phd':
+            highest = 'masters'
+        elif ('bachelor' in degree or 'bs ' in degree or 'ba ' in degree) and highest not in ['phd', 'masters']:
+            highest = 'bachelors'
+        elif ('associate' in degree or 'diploma' in degree) and highest not in ['phd', 'masters', 'bachelors']:
+            highest = 'associate'
+    return highest
+
+def calculate_education_score(candidate_edu, required_edu):
+    """Calculate how well candidate's education matches requirements"""
+    edu_levels = {
+        'phd': 5,
+        'masters': 4, 
+        'bachelors': 3,
+        'associate': 2,
+        'other': 1,
+        'none': 0
+    }
+    candidate_level = edu_levels.get(candidate_edu, 0)
+    required_level = edu_levels.get(required_edu, 0)
+    
+    # Perfect or overqualified
+    if candidate_level >= required_level:
+        return 1.0
+    # Underqualified but has education
+    elif candidate_level > 0:
+        return candidate_level / required_level
+    # No education when some is required
+    else:
+        return 0.0
 
 def preprocess_text(text):
     """Clean and standardize text before embedding"""
