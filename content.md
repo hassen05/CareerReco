@@ -8,14 +8,7 @@ ResumeRec is an innovative AI-powered recruitment platform designed to revolutio
 ### For Job Seekers
 - **AI-Powered Job Matching**: Intelligent algorithms match candidates with relevant job opportunities
 - **Professional Profile Creation**: Create and maintain a comprehensive professional profile
-- **Increased Visibility**: Enhanced exposure to recruiters and hiring managers
-- **Resume Analysis**: Get insights and suggestions for improving your resume
-
-### For Recruiters
-- **Advanced Candidate Search**: Powerful search tools to find the perfect candidates
-- **AI Recommendations**: Smart suggestions based on job requirements
-- **Large Talent Database**: Access to a vast pool of qualified candidates
-- **Efficient Screening**: Automated resume screening and ranking
+- **Increased Visibility**: Enhanced exposure to recruiters and hiring managers**Resume Analysis**: Get insights and suggestions for improving your resumeFor Recruiters**Advanced Candidate Search**: Powerful search tools to find the perfect candidates **AI Recommendations**: Smart suggestions based on job requirements**Large Talent Database**: acess to a vast pool of qualified candidates **Efficient Screening**: Automated resume screening and ranking
 
 ## Technology Stack
 

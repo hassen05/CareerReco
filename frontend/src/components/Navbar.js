@@ -22,6 +22,7 @@ import { supabase } from '../supabaseClient';
 import { motion } from 'framer-motion';
 import { AccountCircle, Notifications, WorkOutline } from '@mui/icons-material';
 import { alpha } from '@mui/material/styles';
+import { useAuth } from '../contexts/AuthContext';
 
 // Hide AppBar on scroll
 function HideOnScroll(props) {
@@ -41,6 +42,7 @@ const Navbar = () => {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
 
   // Primary navigation links
   const navLinks = [
@@ -177,6 +179,26 @@ const Navbar = () => {
           {link.label}
         </MenuItem>
       ))}
+      
+      {userRole === 'candidate' && (
+        <MenuItem
+          component={Link}
+          to="/interview-trainer"
+          onClick={handleMobileMenuClose}
+          sx={{
+            color: location.pathname === '/interview-trainer' ? 'primary.main' : 'text.primary',
+            fontWeight: location.pathname === '/interview-trainer' ? 600 : 500,
+            py: 1.2,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: alpha('#553d8e', 0.04),
+              transform: 'translateX(5px)'
+            }
+          }}
+        >
+          Interview Trainer
+        </MenuItem>
+      )}
       
       <Divider sx={{ my: 1.5 }} />
       
@@ -424,6 +446,41 @@ const Navbar = () => {
                 </motion.div>
               ))}
             </Box>
+
+            {userRole === 'candidate' && (
+              <motion.div whileHover={{ scale: 1.03 }}>
+                <Button
+                  component={Link}
+                  to="/interview-trainer"
+                  sx={{
+                    color: location.pathname === '/interview-trainer' ? 'primary.main' : 'text.secondary',
+                    fontWeight: location.pathname === '/interview-trainer' ? 600 : 500,
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                    position: 'relative',
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                      color: 'primary.main',
+                    },
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      bottom: -2,
+                      left: 0,
+                      width: location.pathname === '/interview-trainer' ? '100%' : '0',
+                      height: '2px',
+                      backgroundColor: 'primary.main',
+                      transition: 'width 0.3s ease'
+                    },
+                    '&:hover::after': {
+                      width: '100%'
+                    }
+                  }}
+                >
+                  Interview Trainer
+                </Button>
+              </motion.div>
+            )}
 
             <Box sx={{ flexGrow: 1 }} />
 

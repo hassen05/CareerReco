@@ -19,7 +19,9 @@ import CompleteProfilePage from './pages/CompleteProfilePage';
 import CreateResumePage from './pages/CreateResumePage';
 import EditProfilePage from './pages/EditProfilePage';
 import PublicProfilePage from './pages/PublicProfilePage';
+import InterviewTrainer from './pages/InterviewTrainer';
 import { supabase } from './supabaseClient';
+import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
   const location = useLocation();
@@ -36,61 +38,71 @@ function App() {
   }, [location, navigate]);
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route 
-          path="/recommend" 
-          element={
-            <ProtectedRoute requiredRole="recruiter">
-              <ResumeRecommender />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/upload" element={<UploadPage />} />
-        <Route path="/about" element={<AboutUs />} />
-        <Route path="/signup" element={<RoleSelection />} />
-        <Route path="/signup/candidate" element={<CandidateSignup />} />
-        <Route path="/signup/recruiter" element={<RecruiterSignup />} />
-        <Route 
-          path="/profile" 
-          element={
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/profile/edit" 
-          element={
-            <ProtectedRoute>
-              <EditProfilePage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route path="/login" element={<LoginPage />} />
-        <Route 
-          path="/complete-profile" 
-          element={
-            <ProtectedRoute>
-              <CompleteProfilePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route 
-          path="/resume/create" 
-          element={
-            <ProtectedRoute>
-              <CreateResumePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/profile/:user_id" element={<PublicProfilePage />} />
-      </Routes>
-      <Footer />
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route 
+            path="/recommend" 
+            element={
+              <ProtectedRoute requiredRole="recruiter">
+                <ResumeRecommender />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/signup" element={<RoleSelection />} />
+          <Route path="/signup/candidate" element={<CandidateSignup />} />
+          <Route path="/signup/recruiter" element={<RecruiterSignup />} />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile/edit" 
+            element={
+              <ProtectedRoute>
+                <EditProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route path="/login" element={<LoginPage />} />
+          <Route 
+            path="/complete-profile" 
+            element={
+              <ProtectedRoute>
+                <CompleteProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="/resume/create" 
+            element={
+              <ProtectedRoute>
+                <CreateResumePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/profile/:user_id" element={<PublicProfilePage />} />
+          <Route 
+            path="/interview-trainer" 
+            element={
+              <ProtectedRoute requiredRole="candidate">
+                <InterviewTrainer />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+        <Footer />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 
