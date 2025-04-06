@@ -43,7 +43,12 @@ SECRET_KEY = "django-insecure-k@h82y0_5w^!x#e#4xjrvfkbozo)pucww=%@xmd288gg@t3z5w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '192.168.1.*',  # Local network range - adjust based on your network
+    'your-production-domain.com',  # If deployed
+]
 
 
 # Application definition
@@ -71,10 +76,47 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     'recommender.middleware.SupabaseAuthentication',
 ]
+
+# Update the CORS settings to allow requests from your mobile app
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
+    "http://localhost:19000",  # Expo development server
+    "http://localhost:19001",
+    "http://localhost:19002",
+    "exp://localhost:19000",   # Expo client URLs
+    "exp://192.168.1.*:19000", # Local network IP ranges for Expo
+    "https://your-production-api.com",  # Your production API URL if deployed
 ]
+
+# Allow all methods for the mobile app
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+]
+
+# Allow credentials and specific headers
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# If your mobile app needs wildcard origin support (test environment)
+# Uncomment the line below during development if you face CORS issues
+# CORS_ALLOW_ALL_ORIGINS = True
+
 ROOT_URLCONF = "resume_recommender.urls"
 
 TEMPLATES = [

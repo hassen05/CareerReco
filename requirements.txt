@@ -9,3 +9,4 @@ openai
 tenacity
 django-cors-headers
 nltk
+python-dotenv

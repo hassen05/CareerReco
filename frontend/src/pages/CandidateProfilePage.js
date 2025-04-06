@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Container, Typography, Box, Avatar, Button, Paper, Grid, 
-  IconButton, Card, Stack
+  IconButton, Card, Stack, List, ListItem, ListItemAvatar,
+  ListItemText, Divider, Chip, CircularProgress
 } from '@mui/material';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { 
   WorkOutline, SchoolOutlined, CodeOutlined, LanguageOutlined,
   EditOutlined, DownloadOutlined, Email, 
-  Phone, LinkedIn, GitHub, Twitter, CardMembershipOutlined
+  Phone, LinkedIn, GitHub, Twitter, CardMembershipOutlined,
+  Business, Visibility
 } from '@mui/icons-material';
 import { useTheme, styled, alpha } from '@mui/material/styles';
 
@@ -61,6 +63,8 @@ function CandidateProfilePage() {
   const [resume, setResume] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [profileViews, setProfileViews] = useState([]);
+  const [loadingViews, setLoadingViews] = useState(true);
   const navigate = useNavigate();
   const theme = useTheme();
 
@@ -111,6 +115,87 @@ function CandidateProfilePage() {
     };
 
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchProfileViews = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.log('No user found');
+          return;
+        }
+
+        console.log('Fetching profile views for user:', user.id);
+
+        // Fetch notifications of type 'profile_view' for the current user
+        const { data: notifications, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('type', 'profile_view')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching notifications:', error);
+          throw error;
+        }
+
+        console.log('Found notifications:', notifications);
+
+        // Get unique companies that viewed the profile
+        const uniqueCompanies = new Map();
+        for (const notification of notifications) {
+          console.log('Processing notification:', notification);
+          const viewerId = notification.data?.viewer_id;
+          console.log('Viewer ID from notification:', viewerId);
+
+          if (!viewerId) {
+            console.warn('No viewer ID found in notification data');
+            continue;
+          }
+
+          if (!uniqueCompanies.has(viewerId)) {
+            try {
+              // Get the viewer's profile
+              const { data: viewerProfile, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', viewerId)
+                .single();
+
+              if (profileError) {
+                console.error('Error fetching viewer profile:', profileError);
+                continue;
+              }
+
+              console.log('Viewer profile:', viewerProfile);
+
+              if (viewerProfile) {
+                uniqueCompanies.set(viewerId, {
+                  company_name: notification.data?.viewer_company || 'Unknown Company',
+                  profile_picture: notification.data?.viewer_profile_picture || viewerProfile.profile_picture || null,
+                  viewed_at: notification.created_at
+                });
+              }
+            } catch (err) {
+              console.error('Error processing viewer profile:', err);
+              continue;
+            }
+          }
+        }
+
+        const views = Array.from(uniqueCompanies.values());
+        console.log('Processed profile views:', views);
+        setProfileViews(views);
+      } catch (error) {
+        console.error('Error in fetchProfileViews:', error);
+      } finally {
+        setLoadingViews(false);
+      }
+    };
+
+    fetchProfileViews();
   }, []);
 
   const parseField = (field) => {
@@ -174,6 +259,74 @@ function CandidateProfilePage() {
           )}
         </Card>
       ))}
+    </Box>
+  );
+
+  const renderProfileViews = () => (
+    <Box sx={{ mt: 4 }}>
+      <SectionHeader 
+        icon={<Visibility sx={{ color: 'primary.main', mr: 2, fontSize: 24 }} />} 
+        title="Companies That Viewed Your Profile" 
+      />
+      {loadingViews ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+          <CircularProgress />
+        </Box>
+      ) : profileViews.length === 0 ? (
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography color="text.secondary">
+            No companies have viewed your profile yet
+          </Typography>
+        </Paper>
+      ) : (
+        <List>
+          {profileViews.map((company, index) => (
+            <React.Fragment key={`${company.company_name}-${index}`}>
+              <ListItem alignItems="flex-start">
+                <ListItemAvatar>
+                  <Avatar 
+                    src={company.profile_picture} 
+                    alt={company.company_name}
+                    sx={{ 
+                      width: 56, 
+                      height: 56,
+                      bgcolor: 'primary.main',
+                      '& img': {
+                        objectFit: 'cover'
+                      }
+                    }}
+                  >
+                    {!company.profile_picture && (
+                      <Business sx={{ fontSize: 32 }} />
+                    )}
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        {company.company_name}
+                      </Typography>
+                      <Chip 
+                        size="small" 
+                        label={new Date(company.viewed_at).toLocaleDateString()} 
+                        color="primary" 
+                        variant="outlined"
+                      />
+                    </Box>
+                  }
+                  secondary={
+                    <Typography variant="body2" color="text.secondary">
+                      Viewed your profile
+                    </Typography>
+                  }
+                />
+              </ListItem>
+              {index < profileViews.length - 1 && <Divider variant="inset" component="li" />}
+            </React.Fragment>
+          ))}
+        </List>
+      )}
     </Box>
   );
 
@@ -331,6 +484,8 @@ function CandidateProfilePage() {
             </Button>
           </Paper>
         )}
+
+        {renderProfileViews()}
 
         <Box sx={{ 
           mt: 4,

@@ -33,40 +33,38 @@ function EditProfilePage() {
     const fetchProfile = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
+        if (!user) throw new Error('User not found');
 
-          if (error) throw error;
-
-          setProfile({
-            id: user.id,
-            first_name: profile.first_name || '',
-            last_name: profile.last_name || '',
-            phone: profile.phone || '',
-            profile_picture: profile.profile_picture || '',
-            bio: profile.bio || '',
-            website: profile.website || '',
-            linkedin: profile.linkedin || '',
-            github: profile.github || '',
-            twitter: profile.twitter || '',
-            visibility: profile.visibility || 'public'
-          });
+        // Check if user is a candidate
+        if (user.user_metadata?.role !== 'candidate') {
+          navigate('/profile/recruiter/edit');
+          return;
         }
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+        setProfile(data || {
+          first_name: '',
+          last_name: '',
+          phone: '',
+          address: '',
+          bio: '',
+          profile_picture: null
+        });
       } catch (error) {
-        console.error('Error fetching profile:', error);
-        setError('Failed to load profile. Please try again later.');
+        setError(error.message);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, []);
+  }, [navigate]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];

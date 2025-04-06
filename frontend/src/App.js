@@ -18,6 +18,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import CompleteProfilePage from './pages/CompleteProfilePage';
 import CreateResumePage from './pages/CreateResumePage';
 import EditProfilePage from './pages/EditProfilePage';
+import RecruiterEditProfilePage from './pages/RecruiterEditProfilePage';
+import RecruiterProfilePage from './pages/RecruiterProfilePage';
 import PublicProfilePage from './pages/PublicProfilePage';
 import InterviewTrainer from './pages/InterviewTrainer';
 import { supabase } from './supabaseClient';
@@ -70,6 +72,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <EditProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile/recruiter" 
+            element={
+              <ProtectedRoute>
+                <RecruiterProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile/recruiter/edit" 
+            element={
+              <ProtectedRoute>
+                <RecruiterEditProfilePage />
               </ProtectedRoute>
             } 
           />

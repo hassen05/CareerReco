@@ -6,11 +6,12 @@ import {
   Avatar, 
   Button,
   Paper,
-  Grid
+  Grid,
+  Link
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { Business, Email, Phone, EditOutlined } from '@mui/icons-material';
+import { Business, Email, Phone, EditOutlined, Language, LinkedIn, Twitter } from '@mui/icons-material';
 
 function RecruiterProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -69,7 +70,7 @@ function RecruiterProfilePage() {
                 Company Information
               </Typography>
               <Typography variant="body1" sx={{ mb: 2 }}>
-                {profile.company_description || 'No description provided'}
+                {profile.description || 'No description provided'}
               </Typography>
             </Box>
 
@@ -91,10 +92,36 @@ function RecruiterProfilePage() {
               </Box>
             </Box>
 
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Social Links
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {profile.website && (
+                  <Link href={profile.website} target="_blank" rel="noopener noreferrer" sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Language sx={{ verticalAlign: 'middle', mr: 1 }} />
+                    Website
+                  </Link>
+                )}
+                {profile.linkedin && (
+                  <Link href={profile.linkedin} target="_blank" rel="noopener noreferrer" sx={{ display: 'flex', alignItems: 'center' }}>
+                    <LinkedIn sx={{ verticalAlign: 'middle', mr: 1 }} />
+                    LinkedIn
+                  </Link>
+                )}
+                {profile.twitter && (
+                  <Link href={profile.twitter} target="_blank" rel="noopener noreferrer" sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Twitter sx={{ verticalAlign: 'middle', mr: 1 }} />
+                    Twitter
+                  </Link>
+                )}
+              </Box>
+            </Box>
+
             <Button
               variant="contained"
               startIcon={<EditOutlined />}
-              onClick={() => navigate('/profile/edit')}
+              onClick={() => navigate('/profile/recruiter/edit')}
             >
               Edit Profile
             </Button>

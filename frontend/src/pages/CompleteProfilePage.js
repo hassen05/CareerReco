@@ -36,13 +36,17 @@ const ProfileAvatar = styled(Avatar)(({ theme }) => ({
 function CompleteProfilePage() {
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
+    // Common fields
+    phone: '',
+    profilePicture: null,
+    // Candidate fields
     firstName: '',
     lastName: '',
-    phone: '',
+    address: '',
     bio: '',
+    // Recruiter fields
     company: '',
-    jobTitle: '',
-    profilePicture: null
+    description: ''
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -54,7 +58,7 @@ function CompleteProfilePage() {
   const navigate = useNavigate();
   
   // Define steps based on user role
-  const candidateSteps = ['Basic Information', 'Add a Profile Picture', 'Complete'];
+  const candidateSteps = ['Personal Information', 'Add a Profile Picture', 'Complete'];
   const recruiterSteps = ['Company Information', 'Add a Profile Picture', 'Complete'];
 
   useEffect(() => {
@@ -69,33 +73,71 @@ function CompleteProfilePage() {
         }
         
         setUserId(user.id);
-        setUserRole(user.user_metadata?.role || 'candidate');
+        // Get role from user metadata
+        const userRole = user.user_metadata?.role || 'candidate';
+        setUserRole(userRole);
         
-        // Try to fetch existing profile
+        // Try to fetch existing profile from the appropriate table
+        const tableName = userRole === 'recruiter' ? 'recruiter_profiles' : 'profiles';
         const { data: profile, error } = await supabase
-          .from('profiles')
+          .from(tableName)
           .select('*')
           .eq('id', user.id)
           .single();
-          
-        if (profile) {
+
+        if (error && error.code === 'PGRST116') {
+          // Profile doesn't exist, create it
+          const initialProfile = {
+            id: user.id,
+            email: user.email,
+            profile_picture: null,
+            phone: '',
+            updated_at: new Date().toISOString()
+          };
+
+          if (userRole === 'recruiter') {
+            initialProfile.company = user.user_metadata?.company || '';
+            initialProfile.description = '';
+            // Only insert into recruiter_profiles
+            const { error: createError } = await supabase
+              .from('recruiter_profiles')
+              .insert([initialProfile]);
+            if (createError) throw createError;
+          } else {
+            initialProfile.first_name = user.user_metadata?.first_name || '';
+            initialProfile.last_name = user.user_metadata?.last_name || '';
+            initialProfile.address = '';
+            initialProfile.bio = '';
+            initialProfile.created_at = new Date().toISOString();
+            // Only insert into profiles
+            const { error: createError } = await supabase
+              .from('profiles')
+              .insert([initialProfile]);
+            if (createError) throw createError;
+          }
+
+          setFormData({
+            phone: '',
+            profilePicture: null,
+            firstName: user.user_metadata?.first_name || '',
+            lastName: user.user_metadata?.last_name || '',
+            address: '',
+            bio: '',
+            company: user.user_metadata?.company || '',
+            description: ''
+          });
+        } else if (profile) {
           // Pre-fill form with existing data
           setFormData({
-            firstName: profile.first_name || user.user_metadata?.first_name || '',
-            lastName: profile.last_name || user.user_metadata?.last_name || '',
             phone: profile.phone || '',
+            profilePicture: profile.profile_picture || null,
+            firstName: profile.first_name || '',
+            lastName: profile.last_name || '',
+            address: profile.address || '',
             bio: profile.bio || '',
             company: profile.company || '',
-            jobTitle: profile.job_title || '',
-            profilePicture: profile.profile_picture || null
+            description: profile.description || ''
           });
-        } else if (user.user_metadata) {
-          // Pre-fill from auth metadata if available
-          setFormData(prev => ({
-            ...prev,
-            firstName: user.user_metadata.first_name || '',
-            lastName: user.user_metadata.last_name || ''
-          }));
         }
       } catch (error) {
         console.error('Error fetching user info:', error);
@@ -139,7 +181,7 @@ function CompleteProfilePage() {
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, {
-          upsert: true // Overwrite if exists
+          upsert: true
         });
 
       if (uploadError) throw uploadError;
@@ -164,52 +206,65 @@ function CompleteProfilePage() {
     try {
       if (!userId) throw new Error('User not found');
 
+      // Get user email
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) throw new Error('User email not found');
+
+      // Get role from user metadata
+      const userRole = user.user_metadata?.role || 'candidate';
+
       // Prepare profile data based on user role
       const profileData = {
         id: userId,
+        email: user.email,
         profile_picture: formData.profilePicture,
         phone: formData.phone,
-        bio: formData.bio,
         updated_at: new Date().toISOString()
       };
 
-      // Add role-specific fields
       if (userRole === 'recruiter') {
+        profileData.description = formData.description;
         profileData.company = formData.company;
-        profileData.job_title = formData.jobTitle;
+        // Only update recruiter_profiles
+        const { error } = await supabase
+          .from('recruiter_profiles')
+          .upsert(profileData);
+        if (error) throw error;
       } else {
         profileData.first_name = formData.firstName;
         profileData.last_name = formData.lastName;
+        profileData.address = formData.address;
+        profileData.bio = formData.bio;
+        profileData.created_at = new Date().toISOString();
+        // Only update profiles
+        const { error } = await supabase
+          .from('profiles')
+          .upsert(profileData);
+        if (error) throw error;
       }
 
-      const { error } = await supabase
-        .from('profiles')
-        .upsert(profileData);
-
-      if (error) throw error;
-
       setSuccess(true);
-      // Wait a moment before redirecting
       setTimeout(() => {
         navigate('/profile');
       }, 2000);
     } catch (error) {
       console.error('Error updating profile:', error);
       setError(`Failed to update profile: ${error.message}`);
-      setActiveStep(0); // Go back to first step on error
+      setActiveStep(0);
     } finally {
       setLoading(false);
     }
   };
 
   const isStepValid = (step) => {
-    if (userRole === 'recruiter') {
-      if (step === 0) {
-        return formData.company.trim() !== '' && formData.jobTitle.trim() !== '';
-      }
-    } else {
-      if (step === 0) {
-        return formData.firstName.trim() !== '' && formData.lastName.trim() !== '';
+    if (step === 0) {
+      if (userRole === 'recruiter') {
+        return formData.company.trim() !== '' && 
+               formData.description.trim() !== '';
+      } else {
+        return formData.firstName.trim() !== '' && 
+               formData.lastName.trim() !== '' &&
+               formData.address.trim() !== '';
       }
     }
     return true;
@@ -272,11 +327,21 @@ function CompleteProfilePage() {
                     />
                     <TextField
                       fullWidth
-                      label="Job Title"
-                      value={formData.jobTitle}
-                      onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                      label="Phone Number"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      margin="normal"
+                    />
+                    <TextField
+                      fullWidth
+                      label="Company Description"
+                      multiline
+                      rows={4}
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       margin="normal"
                       required
+                      placeholder="Tell us about your company..."
                     />
                   </>
                 ) : (
@@ -307,22 +372,29 @@ function CompleteProfilePage() {
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       margin="normal"
                     />
+                    <TextField
+                      fullWidth
+                      label="Address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      margin="normal"
+                      required
+                    />
+                    <TextField
+                      fullWidth
+                      label="Bio"
+                      multiline
+                      rows={4}
+                      value={formData.bio}
+                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                      margin="normal"
+                      placeholder="Tell us a bit about yourself..."
+                    />
                   </>
                 )}
-                
-                <TextField
-                  fullWidth
-                  label="Bio"
-                  multiline
-                  rows={4}
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  margin="normal"
-                  placeholder="Tell us a bit about yourself..."
-                />
               </Box>
             )}
-            
+
             {/* Step 2: Profile Picture */}
             {activeStep === 1 && (
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, py: 3 }}>

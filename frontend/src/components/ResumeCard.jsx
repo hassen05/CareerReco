@@ -16,12 +16,15 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Tooltip
+  Tooltip,
+  Button
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { styled, alpha } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
-import { InfoOutlined, Check } from '@mui/icons-material';
+import { InfoOutlined, Check, OpenInNew } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
+import notificationService from '../services/notificationService';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius * 3,
@@ -110,6 +113,7 @@ const MatchReasonsList = styled(List)(({ theme }) => ({
 const ResumeCard = ({ resume }) => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const { user } = useAuth();
   const [showReasons, setShowReasons] = useState(false);
   const MAX_SKILLS = 3;  // Maximum number of skills to show
   const MAX_CERTS = 2;   // Maximum number of certifications to show
@@ -142,18 +146,76 @@ const ResumeCard = ({ resume }) => {
   const certifications = Array.isArray(resume?.certifications) ? resume.certifications : [];
   const matchReasons = Array.isArray(resume?.match_reasons) ? resume.match_reasons : [];
 
-  const handleCardClick = () => {
+  const handleCardClick = async () => {
     if (resume?.user_id) {
       try {
+        console.log('Current user:', user);
+        console.log('User metadata:', user.user_metadata);
+        console.log('Resume user ID:', resume.user_id);
+        
+        // Create notification if the viewer is a recruiter
+        if (user && user.user_metadata?.account_type === 'recruiter' && resume.user_id !== user.id) {
+          console.log('Creating notification for recruiter view');
+          try {
+            const result = await notificationService.createNotification(
+              resume.user_id,
+              'profile_view',
+              `${user.user_metadata?.company || 'A company'} viewed your profile`,
+              { 
+                viewer_id: user.id,
+                viewer_company: user.user_metadata?.company || 'Unknown Company',
+                viewer_email: user.email,
+                viewer_profile_picture: user.user_metadata?.avatar_url || null
+              }
+            );
+            console.log('Notification creation result:', result);
+          } catch (err) {
+            console.error('Error creating notification:', err);
+          }
+        }
         navigate(`/profile/${resume.user_id}`);
       } catch (err) {
-        console.error("Navigation error:", err);
-        // Show a tooltip or alert that profile isn't available
+        console.error("Error in handleCardClick:", err);
         alert("Profile navigation is not available at this time.");
       }
     }
   };
-  
+
+  const handleOpenNewTab = async (e) => {
+    e.stopPropagation();
+    if (resume?.user_id) {
+      try {
+        console.log('Current user:', user);
+        console.log('User metadata:', user.user_metadata);
+        console.log('Resume user ID:', resume.user_id);
+        
+        // Create notification if the viewer is a recruiter
+        if (user && user.user_metadata?.account_type === 'recruiter' && resume.user_id !== user.id) {
+          console.log('Creating notification for recruiter view (new tab)');
+          try {
+            const result = await notificationService.createNotification(
+              resume.user_id,
+              'profile_view',
+              `${user.user_metadata?.company || 'A company'} viewed your profile`,
+              { 
+                viewer_id: user.id,
+                viewer_company: user.user_metadata?.company || 'Unknown Company',
+                viewer_email: user.email,
+                viewer_profile_picture: user.user_metadata?.avatar_url || null
+              }
+            );
+            console.log('Notification creation result:', result);
+          } catch (err) {
+            console.error('Error creating notification:', err);
+          }
+        }
+        window.open(`/profile/${resume.user_id}`, '_blank');
+      } catch (err) {
+        console.error("Error in handleOpenNewTab:", err);
+      }
+    }
+  };
+
   const toggleReasons = (e) => {
     e.stopPropagation(); // Prevent card click
     setShowReasons(!showReasons);
@@ -173,7 +235,7 @@ const ResumeCard = ({ resume }) => {
           '&:hover': {
             boxShadow: `0 12px 45px -10px ${alpha(theme.palette.primary.main, 0.3)}`
           },
-          position: 'relative', // For absolute positioning of the info button
+          position: 'relative',
         }}
       >
         {/* Info Button */}
@@ -188,6 +250,29 @@ const ResumeCard = ({ resume }) => {
             </InfoButton>
           </Tooltip>
         )}
+
+        {/* Open in New Tab Button */}
+        <Tooltip title="Open profile in new tab">
+          <IconButton
+            size="small"
+            onClick={handleOpenNewTab}
+            sx={{
+              position: 'absolute',
+              top: 12,
+              right: matchReasons.length > 0 ? 48 : 12,
+              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+              color: theme.palette.primary.main,
+              width: 32,
+              height: 32,
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.2),
+              },
+            }}
+          >
+            <OpenInNew fontSize="small" />
+          </IconButton>
+        </Tooltip>
         
         <CardContent sx={{ flex: 1 }}>
           <CardHeader>
