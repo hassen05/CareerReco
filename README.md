@@ -35,10 +35,7 @@ A web application that recommends the best resumes for a given job description u
     Navigate to the frontend directory:
         cd frontend
     Install dependencies:
-        npm install
-        npm install @mui/icons-material framer-motion tsparticles react-tsparticles
-        npm install react-tsparticles tsparticles-engine tsparticles
-        npm install @supabase/supabase-js
+        npm install        
 8. Run the frontend server:
     npm start
 9. Access the application:
