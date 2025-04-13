@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from datetime import datetime
-from pymongo import MongoClient
+
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -31,8 +31,7 @@ MONGO_URI = "mongodb://localhost:27017/"  # Local MongoDB
 DATABASE_NAME = "resumerec"
 
 # Initialize MongoDB client
-mongo_client = MongoClient(MONGO_URI)
-mongo_db = mongo_client[DATABASE_NAME]
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/

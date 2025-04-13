@@ -395,7 +395,7 @@ const Navbar = () => {
                     WebkitTextFillColor: 'transparent'
                   }}
                 >
-                  ResuMatch
+                  Recruiter.ai
                 </Typography>
               </motion.div>
             </Box>
