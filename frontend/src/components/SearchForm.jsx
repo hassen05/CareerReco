@@ -10,12 +10,22 @@ import {
   useTheme,
   CircularProgress,
   InputAdornment,
-  Slider
+  Slider,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Tooltip,
+  Divider
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { alpha } from '@mui/system';
 import SearchIcon from '@mui/icons-material/Search';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius * 4,
@@ -65,10 +75,17 @@ const SearchForm = ({ onSubmit, loading }) => {
   const theme = useTheme();
   const [jobDesc, setJobDesc] = useState('');
   const [topN, setTopN] = useState(5);
+  const [recommendationType, setRecommendationType] = useState('traditional');
+  const [llmModel, setLlmModel] = useState('llama4');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({ jobDesc, topN: Number(topN) });
+    onSubmit({ 
+      jobDesc, 
+      topN: Number(topN),
+      recommendationType,
+      llmModel
+    });
   };
 
   return (
@@ -126,6 +143,103 @@ const SearchForm = ({ onSubmit, loading }) => {
               }}
             />
           </Box>
+
+          <Divider sx={{ my: 2 }} />
+          
+          <Box sx={{ mb: 3 }}>
+            <FormControl component="fieldset">
+              <FormLabel component="legend" sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                mb: 1,
+                color: 'text.primary',
+                fontWeight: 500
+              }}>
+                <ManageSearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                Recommendation Engine
+              </FormLabel>
+              
+              <RadioGroup
+                row
+                name="recommendation-type"
+                value={recommendationType}
+                onChange={(e) => setRecommendationType(e.target.value)}
+              >
+                <Tooltip title="Traditional NLP-based recommendation using sentence embeddings">
+                  <FormControlLabel 
+                    value="traditional" 
+                    control={<Radio />} 
+                    label={<Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PsychologyAltIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                      <Typography variant="body2">Traditional NLP</Typography>
+                    </Box>} 
+                  />
+                </Tooltip>
+                
+                <Tooltip title="Combines NLP and LLM for more comprehensive recommendations">
+                  <FormControlLabel 
+                    value="hybrid" 
+                    control={<Radio />} 
+                    label={<Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <SmartToyIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                      <Typography variant="body2">Hybrid (NLP+LLM)</Typography>
+                    </Box>} 
+                  />
+                </Tooltip>
+                
+                <Tooltip title="Pure LLM-based recommendation with deep reasoning">
+                  <FormControlLabel 
+                    value="llm_only" 
+                    control={<Radio />} 
+                    label={<Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <SmartToyIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                      <Typography variant="body2">LLM Only</Typography>
+                    </Box>} 
+                  />
+                </Tooltip>
+              </RadioGroup>
+            </FormControl>
+          </Box>
+          
+          {(recommendationType === 'hybrid' || recommendationType === 'llm_only') && (
+            <Box sx={{ mb: 3 }}>
+              <FormControl component="fieldset">
+                <FormLabel component="legend" sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  mb: 1,
+                  color: 'text.primary',
+                  fontWeight: 500
+                }}>
+                  <SmartToyIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                  LLM Model
+                </FormLabel>
+                
+                <RadioGroup
+                  row
+                  name="llm-model"
+                  value={llmModel}
+                  onChange={(e) => setLlmModel(e.target.value)}
+                >
+                  <Tooltip title="Meta's Llama 4 Maverick - Better at reasoning about professional context">
+                    <FormControlLabel 
+                      value="llama4" 
+                      control={<Radio />} 
+                      label="Llama 4 Maverick" 
+                    />
+                  </Tooltip>
+                  
+                  <Tooltip title="NVIDIA's Nemotron Super 49B - Powerful for structured analysis">
+                    <FormControlLabel 
+                      value="nemotron" 
+                      control={<Radio />} 
+                      label="Nemotron Super 49B" 
+                    />
+                  </Tooltip>
+                </RadioGroup>
+              </FormControl>
+            </Box>
+          )}
 
           <Button
             type="submit"

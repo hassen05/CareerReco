@@ -101,14 +101,48 @@ def load_resumes():
         profiles_response = supabase.table('profiles').select('*').execute()
         profiles = profiles_response.data
 
-        # Join resumes with profiles
+        # Join resumes with profiles and ensure all resumes have basic info
         for resume in resumes:
-            profile = next((p for p in profiles if p['id'] == resume['user_id']), None)
+            # Find matching profile
+            profile = next((p for p in profiles if p['id'] == resume.get('user_id')), None)
+            
+            # Add profile data
             if profile:
-                resume['name'] = f"{profile.get('first_name', '')} {profile.get('last_name', '')}"
+                first_name = profile.get('first_name', '').strip()
+                last_name = profile.get('last_name', '').strip() 
+                if first_name or last_name:
+                    resume['name'] = f"{first_name} {last_name}".strip()
+                else:
+                    resume['name'] = f"Candidate {resume.get('user_id', 'Unknown')[:8]}"
                 resume['email'] = profile.get('email', '')
                 resume['phone'] = profile.get('phone', '')
                 resume['address'] = profile.get('address', '')
+            else:
+                resume['name'] = f"Candidate {resume.get('user_id', 'Unknown')[:8]}"
+                
+            # Ensure there's always some content in the key fields
+            if not resume.get('experience') or not isinstance(resume.get('experience'), list) or len(resume.get('experience', [])) == 0:
+                resume['experience'] = [{
+                    'position': 'Unspecified Position',
+                    'company': 'No company information available',
+                    'description': ''
+                }]
+                
+            if not resume.get('education') or not isinstance(resume.get('education'), list) or len(resume.get('education', [])) == 0:
+                resume['education'] = [{
+                    'degree': 'Unspecified Degree',
+                    'institution': 'No institution information available'
+                }]
+            
+            # Ensure skills and other arrays exist
+            if not resume.get('skills') or not isinstance(resume.get('skills'), list):
+                resume['skills'] = []
+                
+            if not resume.get('certifications') or not isinstance(resume.get('certifications'), list):
+                resume['certifications'] = []
+                
+            if not resume.get('languages') or not isinstance(resume.get('languages'), list):
+                resume['languages'] = []
                 
 
         # Decode Base64 embeddings

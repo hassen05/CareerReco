@@ -23,14 +23,12 @@ load_dotenv()
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 
+# OpenRouter API configuration
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Add MongoDB configuration
-MONGO_URI = "mongodb://localhost:27017/"  # Local MongoDB
-DATABASE_NAME = "resumerec"
-
-# Initialize MongoDB client
 
 
 # Quick-start development settings - unsuitable for production

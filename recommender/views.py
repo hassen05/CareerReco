@@ -12,6 +12,7 @@ import os
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import base64
+from .llm_recommender import recommend_resumes_llm, hybrid_recommend_resumes
 
 logger = logging.getLogger('recommender')
 
@@ -39,6 +40,84 @@ class RecommendAPI(APIView):
             return Response(recommended)
         except Exception as e:
             logger.error(f'Error in recommendation: {str(e)}')
+            return Response({"error": str(e)}, status=500)
+
+
+class LLMRecommendAPI(APIView):
+    """API endpoint for LLM-based resume recommendations"""
+    def post(self, request):
+        try:
+            logger.info(f"Received LLM recommendation request: {request.data}")
+            job_desc = request.data.get("job_description", "")
+            top_n = request.data.get("top_n", 5)
+            model_name = request.data.get("model", "llama4")  # llama4 or nemotron
+            recommendation_type = request.data.get("recommendation_type", "hybrid")  # hybrid or llm_only
+            
+            # Load resumes
+            resumes = load_resumes()
+            
+            # Filter only resumes with valid embeddings for hybrid approach
+            valid_resumes = [r for r in resumes if r.get('embedding') is not None and np.size(r['embedding']) > 0]
+            logger.info(f"Processing {len(valid_resumes)} resumes with valid embeddings")
+            
+            # Get recommendations using the appropriate method
+            try:
+                if recommendation_type == "hybrid":
+                    recommended = hybrid_recommend_resumes(
+                        job_desc, 
+                        valid_resumes, 
+                        top_n=top_n, 
+                        model_name=model_name
+                    )
+                else:  # llm_only
+                    recommended = recommend_resumes_llm(
+                        job_desc, 
+                        valid_resumes, 
+                        top_n=top_n, 
+                        model_name=model_name
+                    )
+                    
+                # Fallback: If no recommendations were returned, use traditional method
+                if not recommended and valid_resumes:
+                    logger.warning("LLM recommender returned no results - falling back to traditional NLP")
+                    from .utils import recommend_resumes
+                    # Use traditional NLP-based recommendation as fallback
+                    fallback_recommendations = recommend_resumes(job_desc, valid_resumes, top_n=top_n)
+                    
+                    # Add LLM-specific fields to maintain compatibility
+                    for rec in fallback_recommendations:
+                        rec['reasoning'] = "Generated using traditional NLP matching (LLM unavailable)"
+                        rec['match_reasons'] = [
+                            "Fallback mode: LLM evaluation unavailable",
+                            "✓ Strength: Resume contains relevant skills and experience",
+                            "△ Note: This is a basic match without semantic analysis"
+                        ]
+                    recommended = fallback_recommendations
+            except Exception as e:
+                logger.error(f"Error in recommendation process: {str(e)}")
+                # Last-resort fallback - return top N resumes with default scores
+                recommended = []
+                for i, resume in enumerate(valid_resumes[:top_n]):
+                    recommended.append({
+                        'resume': resume,
+                        'score': 0.5,  # Default middle score
+                        'reasoning': "Using basic matching due to service error.",
+                        'match_reasons': [
+                            "System notice: Recommendation service encountered an error.",
+                            "✓ Basic match based on resume content"
+                        ]
+                    })
+            
+            logger.info({
+                'event': 'llm_recommendation_request',
+                'user_id': getattr(request.user, 'id', None),
+                'params': request.data,
+                'model': model_name,
+                'type': recommendation_type
+            })
+            return Response(recommended)
+        except Exception as e:
+            logger.error(f'Error in LLM recommendation: {str(e)}')
             return Response({"error": str(e)}, status=500)
 
 def get_match_reasons(resume, job_desc):

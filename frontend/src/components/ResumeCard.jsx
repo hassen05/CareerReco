@@ -52,13 +52,7 @@ const StyledCard = styled(Card)(({ theme }) => ({
   }
 }));
 
-const CardHeader = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: theme.spacing(3),
-  paddingBottom: 0,
-}));
+
 
 const ScoreBadge = styled(Chip)(({ theme }) => ({
   background: `linear-gradient(45deg, ${theme.palette.secondary.main} 30%, ${theme.palette.primary.main} 90%)`,
@@ -78,14 +72,7 @@ const DetailChip = styled(Box)(({ theme }) => ({
   fontSize: '0.8rem',
 }));
 
-const AndMoreChip = styled(Box)(({ theme }) => ({
-  backgroundColor: 'transparent',
-  color: theme.palette.text.secondary,
-  padding: '2px 6px',
-  borderRadius: '4px',
-  fontSize: '0.7rem',
-  fontStyle: 'italic',
-}));
+
 
 const InfoButton = styled(IconButton)(({ theme }) => ({
   position: 'absolute',
@@ -110,6 +97,8 @@ const MatchReasonsList = styled(List)(({ theme }) => ({
   margin: theme.spacing(2, 0),
 }));
 
+
+
 const ResumeCard = ({ resume }) => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -121,7 +110,14 @@ const ResumeCard = ({ resume }) => {
   // Safe access functions with fallbacks
   const safeName = () => {
     if (!resume) return 'Candidate';
+    // Check for name from profile info
     if (typeof resume.name === 'string' && resume.name) return resume.name;
+    // Check profile fields directly
+    if (resume.first_name || resume.last_name) {
+      return `${resume.first_name || ''} ${resume.last_name || ''}`.trim();
+    }
+    // Use user_id as fallback
+    if (resume.user_id) return `Candidate ${resume.user_id}`;
     return 'Unnamed Candidate';
   };
   
@@ -130,50 +126,86 @@ const ResumeCard = ({ resume }) => {
     return name && typeof name === 'string' && name.length > 0 ? name.charAt(0).toUpperCase() : '?';
   };
   
+  // Handle both NLP and LLM response formats
+  // If resume has a nested 'resume' property, it's from the LLM recommender
+  const resumeData = resume?.resume ? resume.resume : resume;
+  
   // Handle undefined or null score
   const formattedScore = resume?.score !== undefined ? 
-    parseFloat(resume.score).toFixed(3) : '0.000';
+    parseFloat(resume.score).toFixed(2) : '0.00';
 
   // Convert education object to a string
-  const educationText = resume?.education && Array.isArray(resume.education) && resume.education.length > 0
-    ? `${resume.education[0].degree || 'Degree'} at ${resume.education[0].institution || 'Institution'}`
+  const educationText = resumeData?.education && Array.isArray(resumeData.education) && resumeData.education.length > 0
+    ? `${resumeData.education[0].degree || resumeData.education[0].name || 'Degree'} at ${resumeData.education[0].institution || resumeData.education[0].school || 'Institution'}`
     : 'No education information available';
     
-  // Safe access to arrays
-  const skills = Array.isArray(resume?.skills) ? resume.skills : [];
-  const experience = Array.isArray(resume?.experience) ? resume.experience : [];
-  const languages = Array.isArray(resume?.languages) ? resume.languages : [];
-  const certifications = Array.isArray(resume?.certifications) ? resume.certifications : [];
+  // Convert experience object to a string
+  const experienceText = resumeData?.experience && Array.isArray(resumeData.experience) && resumeData.experience.length > 0
+    ? `${resumeData.experience[0].position || resumeData.experience[0].title || 'Position'} at ${resumeData.experience[0].company || resumeData.experience[0].employer || 'Company'}`
+    : 'No experience information available';
+    
+  // Debug log to help diagnose what's in the resume object
+  console.log('Resume data:', resume);
+    
+  // Safe access to arrays with resumeData (supports both NLP and LLM formats)
+  const skills = Array.isArray(resumeData?.skills) ? resumeData.skills : [];
+  const experience = Array.isArray(resumeData?.experience) ? resumeData.experience : [];
+  const languages = Array.isArray(resumeData?.languages) ? resumeData.languages : [];
+  const certifications = Array.isArray(resumeData?.certifications) ? resumeData.certifications : [];
+  // Match reasons come from the top-level object for LLM responses
   const matchReasons = Array.isArray(resume?.match_reasons) ? resume.match_reasons : [];
+  
+  // Check if this resume has LLM insights
+  const hasLlmInsights = matchReasons.some(reason => 
+    reason.startsWith('✓ Strength:') || 
+    reason.startsWith('△ Gap:') || 
+    reason.length > 100 // Likely an LLM reasoning
+  );
+  
+  // Process match reasons to remove duplicates
+  const processedMatchReasons = (() => {
+    // Create a Set to track unique reasons
+    const uniqueReasons = new Set();
+    
+    // Filter out duplicates
+    return matchReasons.filter(reason => {
+      // If we haven't seen this reason before, add it and return true
+      if (!uniqueReasons.has(reason)) {
+        uniqueReasons.add(reason);
+        return true;
+      }
+      // If we've seen this reason before, return false
+      return false;
+    });
+  })();
 
   const handleCardClick = async () => {
-    if (resume?.user_id) {
+    if (resumeData?.user_id) {
       try {
         console.log('Current user:', user);
-        console.log('User metadata:', user.user_metadata);
-        console.log('Resume user ID:', resume.user_id);
+        console.log('Resume user ID:', resumeData.user_id);
         
         // Create notification if the viewer is a recruiter
-        if (user && user.user_metadata?.account_type === 'recruiter' && resume.user_id !== user.id) {
+        if (user && user.user_metadata?.account_type === 'recruiter' && resumeData.user_id !== user.id) {
           console.log('Creating notification for recruiter view');
-          try {
-            const result = await notificationService.createNotification(
-              resume.user_id,
-              'profile_view',
-              `${user.user_metadata?.company || 'A company'} viewed your profile`,
-              { 
-                viewer_id: user.id,
-                viewer_company: user.user_metadata?.company || 'Unknown Company',
-                viewer_email: user.email,
-                viewer_profile_picture: user.user_metadata?.avatar_url || null
-              }
-            );
+            try {
+              const result = await notificationService.createNotification(
+                resumeData.user_id,
+                'profile_view',
+                `${user.user_metadata?.company || 'A company'} viewed your profile`,
+                { 
+                  viewer_id: user.id,
+                  viewer_company: user.user_metadata?.company || 'Unknown Company',
+                  viewer_email: user.email,
+                  viewer_profile_picture: user.user_metadata?.avatar_url || null
+                }
+              );
             console.log('Notification creation result:', result);
           } catch (err) {
             console.error('Error creating notification:', err);
           }
         }
-        navigate(`/profile/${resume.user_id}`);
+        navigate(`/profile/${resumeData.user_id}`);
       } catch (err) {
         console.error("Error in handleCardClick:", err);
         alert("Profile navigation is not available at this time.");
@@ -183,33 +215,9 @@ const ResumeCard = ({ resume }) => {
 
   const handleOpenNewTab = async (e) => {
     e.stopPropagation();
-    if (resume?.user_id) {
+    if (resumeData?.user_id) {
       try {
-        console.log('Current user:', user);
-        console.log('User metadata:', user.user_metadata);
-        console.log('Resume user ID:', resume.user_id);
-        
-        // Create notification if the viewer is a recruiter
-        if (user && user.user_metadata?.account_type === 'recruiter' && resume.user_id !== user.id) {
-          console.log('Creating notification for recruiter view (new tab)');
-          try {
-            const result = await notificationService.createNotification(
-              resume.user_id,
-              'profile_view',
-              `${user.user_metadata?.company || 'A company'} viewed your profile`,
-              { 
-                viewer_id: user.id,
-                viewer_company: user.user_metadata?.company || 'Unknown Company',
-                viewer_email: user.email,
-                viewer_profile_picture: user.user_metadata?.avatar_url || null
-              }
-            );
-            console.log('Notification creation result:', result);
-          } catch (err) {
-            console.error('Error creating notification:', err);
-          }
-        }
-        window.open(`/profile/${resume.user_id}`, '_blank');
+        window.open(`/profile/${resumeData.user_id}`, '_blank');
       } catch (err) {
         console.error("Error in handleOpenNewTab:", err);
       }
@@ -274,123 +282,178 @@ const ResumeCard = ({ resume }) => {
           </IconButton>
         </Tooltip>
         
-        <CardContent sx={{ flex: 1 }}>
-          <CardHeader>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ 
-                bgcolor: alpha(theme.palette.primary.main, 0.2),
-                color: 'primary.main',
-                width: 56, 
-                height: 56,
-                fontSize: '1.5rem',
-                fontWeight: 700 
-              }}>
-                {safeInitial()}
-              </Avatar>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {safeName()}
+        <CardContent sx={{ flex: 1, p: 2.5 }}>
+          {/* Header with Avatar and Name */}
+          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+            <Avatar sx={{ 
+              bgcolor: alpha(theme.palette.primary.main, 0.2),
+              color: 'primary.main',
+              width: 60, 
+              height: 60,
+              fontSize: '1.5rem',
+              fontWeight: 700 
+            }}>
+              {safeInitial()}
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                {resumeData?.name || 'Unnamed Candidate'}
+              </Typography>
+              <ScoreBadge label={`${formattedScore} Match`} />
+            </Box>
+          </Stack>
+          
+          {/* Resume Details */}
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                🎓 Education
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {educationText}
               </Typography>
             </Box>
-            <ScoreBadge label={`${formattedScore} Match`} />
-          </CardHeader>
-
-          <Stack spacing={2} sx={{ p: 3 }}>
-            <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.1) }} />
             
-            {/* Match Reasons Collapsible Section */}
-            {matchReasons.length > 0 && (
-              <Collapse in={showReasons} timeout="auto" unmountOnExit>
-                <MatchReasonsList>
-                  <Typography variant="subtitle2" color="primary" sx={{ mb: 1, fontWeight: 600 }}>
-                    Why This Match:
-                  </Typography>
-                  {matchReasons.map((reason, idx) => (
-                    <ListItem 
-                      key={idx} 
-                      dense 
-                      disableGutters 
-                      disablePadding 
-                      sx={{ mb: 0.5 }}
-                    >
-                      <ListItemIcon sx={{ minWidth: 28 }}>
-                        <Check color="success" fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText 
-                        primary={reason} 
-                        primaryTypographyProps={{ 
-                          variant: 'body2', 
-                          color: 'text.secondary' 
-                        }} 
-                      />
-                    </ListItem>
+            <Box>
+              <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                💼 Experience
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {experienceText}
+              </Typography>
+            </Box>
+            
+            {skills.length > 0 && (
+              <Box>
+                <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                  🔧 Skills
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {skills.slice(0, MAX_SKILLS).map((skill, index) => (
+                    <DetailChip key={index}>{skill}</DetailChip>
                   ))}
-                </MatchReasonsList>
-              </Collapse>
+                  {skills.length > MAX_SKILLS && (
+                    <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>+{skills.length - MAX_SKILLS} more</Typography>
+                  )}
+                </Stack>
+              </Box>
             )}
-
-            <Section title="🎓 Education">
-              <Typography variant="body2">{educationText}</Typography>
-            </Section>
             
-            <Section title="🛠️ Core Skills">
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                {skills.slice(0, MAX_SKILLS).map((skill, index) => (
-                  <DetailChip key={index}>{skill}</DetailChip>
-                ))}
-                {skills.length > MAX_SKILLS && (
-                  <AndMoreChip>+{skills.length - MAX_SKILLS} more</AndMoreChip>
-                )}
-              </Stack>
-            </Section>
-
-            <Section title="💼 Professional Experience">
-              {experience.map((job, index) => {
-                const startDate = new Date(job.start_date);
-                const endDate = job.end_date ? new Date(job.end_date) : new Date();
-                const years = (endDate.getFullYear() - startDate.getFullYear()) + 
-                             (endDate.getMonth() - startDate.getMonth()) / 12;
-                const formattedYears = Math.round(years * 10) / 10; // Round to 1 decimal
-                
-                return (
-                  <Typography key={index} variant="body2" sx={{ color: 'text.secondary' }}>
-                    <strong>{formattedYears}y</strong> as {job.position} at {job.company}
-                  </Typography>
-                );
-              })}
-            </Section>
-
-            <Section title="🌍 Languages">
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                {languages.map((lang, index) => (
-                  <DetailChip key={index}>{lang}</DetailChip>
-                ))}
-              </Stack>
-            </Section>
-
-            <Section title="🏆 Certifications">
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                {certifications.slice(0, MAX_CERTS).map((cert, index) => (
-                  <DetailChip key={index}>{cert}</DetailChip>
-                ))}
-                {certifications.length > MAX_CERTS && (
-                  <AndMoreChip>+{certifications.length - MAX_CERTS} more</AndMoreChip>
-                )}
-              </Stack>
-            </Section>
+            {languages.length > 0 && (
+              <Box>
+                <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                  🌍 Languages
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {languages.map((lang, index) => (
+                    <DetailChip key={index}>{lang}</DetailChip>
+                  ))}
+                </Stack>
+              </Box>
+            )}
           </Stack>
+
+          {/* Match reasons section */}
+          {matchReasons.length > 0 && (
+            <Collapse in={showReasons} timeout="auto" unmountOnExit>
+              <Box sx={{ mb: 2, p: 2, bgcolor: alpha(theme.palette.background.paper, 0.7), borderRadius: 1.5, border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`, boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.05)}` }}>
+                <Typography variant="body1" color="primary.main" sx={{ mb: 2, fontWeight: 600 }}>
+                  ⭐ Why This Match
+                </Typography>
+                {processedMatchReasons.map((reason, idx) => {
+                  const isStrength = reason.startsWith('✓ Strength:');
+                  const isGap = reason.startsWith('△ Gap:');
+                  const isLongReasoning = reason.length > 100;
+                  
+                  if (isLongReasoning && idx === 0) {
+                    // First long reasoning is likely from LLM
+                    return (
+                      <Box key={idx} sx={{ mb: 2, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.6)}` }}>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{ fontStyle: 'italic', lineHeight: 1.5 }}
+                        >
+                          {reason}
+                        </Typography>
+                      </Box>
+                    );
+                  } else if (isStrength) {
+                    // Display strengths with green check
+                    return (
+                      <ListItem 
+                        key={idx} 
+                        dense 
+                        disableGutters 
+                        disablePadding 
+                        sx={{ mb: 0.5 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 28 }}>
+                          <Check sx={{ color: 'success.main' }} fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={reason.replace('✓ Strength: ', '')} 
+                          primaryTypographyProps={{ 
+                            variant: 'body2', 
+                            color: 'success.dark',
+                            fontWeight: 500
+                          }} 
+                        />
+                      </ListItem>
+                    );
+                  } else if (isGap) {
+                    // Display gaps with warning triangle
+                    return (
+                      <ListItem 
+                        key={idx} 
+                        dense 
+                        disableGutters 
+                        disablePadding 
+                        sx={{ mb: 0.5 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 28 }}>
+                          <span style={{ color: '#ED6C02', fontSize: '18px' }}>△</span>
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={reason.replace('△ Gap: ', '')} 
+                          primaryTypographyProps={{ 
+                            variant: 'body2', 
+                            color: 'warning.dark' 
+                          }} 
+                        />
+                      </ListItem>
+                    );
+                  } else {
+                    // Regular match reason
+                    return (
+                      <ListItem 
+                        key={idx} 
+                        dense 
+                        disableGutters 
+                        disablePadding 
+                        sx={{ mb: 0.5 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 28 }}>
+                          <Check color="success" fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={reason} 
+                          primaryTypographyProps={{ 
+                            variant: 'body2', 
+                            color: 'text.secondary' 
+                          }} 
+                        />
+                      </ListItem>
+                    );
+                  }
+                })}
+              </Box>
+            </Collapse>
+          )}
         </CardContent>
       </StyledCard>
     </motion.div>
   );
 };
-
-const Section = ({ title, children }) => (
-  <Box sx={{ mb: 2 }}>
-    <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
-      {title}
-    </Typography>
-    {children}
-  </Box>
-);
 
 export default ResumeCard;
