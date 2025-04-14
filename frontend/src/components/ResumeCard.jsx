@@ -24,7 +24,7 @@ import { styled, alpha } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
 import { InfoOutlined, Check, OpenInNew } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import notificationService from '../services/notificationService';
+import { notificationService } from '../services/notificationService'; // Update import path
 
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius * 3,
