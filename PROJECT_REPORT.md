@@ -137,6 +137,48 @@ pie title Recommendation Mode Performance
     "Hybrid Matching" : 25
 ```
 
+### Detailed Performance Breakdown
+
+#### NLP Matching (40%)
+- **Strengths**: 
+  - Fastest processing time
+  - Lightweight and efficient
+  - Precise skill and keyword matching
+- **Use Cases**: 
+  - Quick initial screening
+  - High-volume resume filtering
+  - Technical skill matching
+
+#### LLM Matching (35%)
+- **Strengths**:
+  - Deep contextual understanding
+  - Nuanced interpretation of experience
+  - Ability to read between the lines
+- **Use Cases**:
+  - Complex role evaluations
+  - Soft skill assessment
+  - Contextual job fit analysis
+
+#### Hybrid Matching (25%)
+- **Strengths**:
+  - Combines precision of NLP with depth of LLM
+  - Most comprehensive evaluation
+  - Balances speed and detailed analysis
+- **Use Cases**:
+  - Senior and executive-level recruitment
+  - Roles requiring complex skill assessment
+  - Comprehensive candidate evaluation
+
+### Performance Metrics Explanation
+- **Processing Speed**: NLP > Hybrid > LLM
+- **Depth of Analysis**: LLM > Hybrid > NLP
+- **Computational Cost**: LLM > Hybrid > NLP
+
+**Recommendation Strategy**:
+- Use NLP for initial screening
+- Apply Hybrid for shortlisted candidates
+- Leverage LLM for final in-depth evaluation
+
 ## Data Flow in Recommendation Process
 
 ```mermaid
