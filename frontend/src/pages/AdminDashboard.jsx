@@ -68,28 +68,68 @@ const AdminDashboard = () => {
     last_name: "",
     email: "",
     role: "candidate",
+    source: "profiles",
   });
 
-  // Fetch profiles from both "profiles" and "recruiter_profiles" tables
-// Usually run from a secure environment or with a service_key,
-// unless you create the appropriate RLS policy.
-const fetchAllAuthUsers = async () => {
-  const { data, error } = await supabase
-    .from("auth.users")
-    .select("*");
+  const fetchProfiles = async () => {
+    setLoading(true);
+    try {
+      // Run both queries in parallel to fetch profiles and recruiter profiles
+      const [{ data: profilesData, error: profilesError }, { data: recruitersData, error: recruitersError }] = await Promise.all([
+        supabase.from("profiles").select("*"),  // Fetch all profiles
+        supabase.from("recruiter_profiles").select("*"),  // Fetch all recruiter profiles
+      ]);
 
-  if (error) {
-    console.error("Error fetching auth.users data:", error);
-    return;
-  }
-  console.log("All auth.users:", data);
-};
+      if (profilesError || recruitersError) {
+        console.error("Error fetching profiles:", profilesError || recruitersError);
+        setAlert({
+          open: true,
+          message: "Error fetching profiles",
+          severity: "error",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Add a source property to identify which table the record came from
+      const candidateProfiles = (profilesData || []).map((p) => ({
+        ...p,
+        source: "profiles",
+      }));
+      const normalizedRecruiters = (recruitersData || []).map((r) => ({
+        id: r.id,
+        first_name: r.first_name || "Recruiter",
+        last_name: r.last_name || "",
+        email: r.email || "",
+        profile_picture: r.profile_picture || "",
+        role: "recruiter",
+        created_at: r.created_at || new Date().toISOString(),
+        source: "recruiter_profiles",
+      }));
+
+      const combinedProfiles = [...candidateProfiles, ...normalizedRecruiters];
+      combinedProfiles.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      setProfiles(combinedProfiles);
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      setAlert({
+        open: true,
+        message: "Unexpected error occurred",
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchProfiles();
   }, []);
 
-  // Handle form input changes
+  // --- FORM HANDLERS ---
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -97,34 +137,49 @@ const fetchAllAuthUsers = async () => {
     });
   };
 
-  // Create a new profile (only added to the "profiles" table)
+  // Create new profile based on selected role.
   const handleCreate = async () => {
-    const { error } = await supabase.from("profiles").insert([formData]);
-    if (error) {
-      console.error("Error creating profile:", error);
-      setAlert({
-        open: true,
-        message: "Error creating profile",
-        severity: "error",
-      });
-    } else {
-      setAlert({
-        open: true,
-        message: "Profile created successfully",
-        severity: "success",
-      });
-      setFormData({
-        first_name: "",
-        last_name: "",
-        email: "",
-        role: "candidate",
-      });
-      setOpenCreateModal(false);
-      fetchProfiles();
+    if (formData.role === "candidate") {
+      const { error } = await supabase.from("profiles").insert([formData]);
+      if (error) {
+        console.error("Error creating candidate profile:", error);
+        setAlert({
+          open: true,
+          message: "Error creating profile",
+          severity: "error",
+        });
+        return;
+      }
+    } else if (formData.role === "recruiter") {
+      const recruiterData = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+        profile_picture: formData.profile_picture || "",
+        role: "recruiter",
+      };
+      const { error } = await supabase.from("recruiter_profiles").insert([recruiterData]);
+      if (error) {
+        console.error("Error creating recruiter profile:", error);
+        setAlert({
+          open: true,
+          message: "Error creating profile",
+          severity: "error",
+        });
+        return;
+      }
     }
+    setAlert({
+      open: true,
+      message: "Profile created successfully",
+      severity: "success",
+    });
+    setFormData({ first_name: "", last_name: "", email: "", role: "candidate", source: "profiles" });
+    setOpenCreateModal(false);
+    fetchProfiles();
   };
 
-  // Set up edit mode for an existing profile (opens edit modal)
+  // Load a profile for editing.
   const handleEdit = (profile) => {
     setEditProfileId(profile.id);
     setFormData({
@@ -132,62 +187,57 @@ const fetchAllAuthUsers = async () => {
       last_name: profile.last_name,
       email: profile.email,
       role: profile.role,
+      source: profile.source,
     });
   };
 
-  // Update an existing profile (only applies to the "profiles" table)
+  // Update the record without moving it between tables.
   const handleUpdate = async () => {
-    const { error } = await supabase
-      .from("profiles")
-      .update(formData)
-      .match({ id: editProfileId });
-    if (error) {
-      console.error("Error updating profile:", error);
-      setAlert({
-        open: true,
-        message: "Error updating profile",
-        severity: "error",
-      });
-    } else {
-      setAlert({
-        open: true,
-        message: "Profile updated successfully",
-        severity: "success",
-      });
-      setEditProfileId(null);
-      setFormData({
-        first_name: "",
-        last_name: "",
-        email: "",
-        role: "candidate",
-      });
-      fetchProfiles();
+    if (formData.source === "profiles") {
+      const { error } = await supabase.from("profiles").update(formData).match({ id: editProfileId });
+      if (error) {
+        console.error("Error updating candidate profile:", error);
+        setAlert({ open: true, message: "Error updating profile", severity: "error" });
+        return;
+      }
+    } else if (formData.source === "recruiter_profiles") {
+      const updateData = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+        profile_picture: formData.profile_picture || "",
+      };
+      const { error } = await supabase.from("recruiter_profiles").update(updateData).match({ id: editProfileId });
+      if (error) {
+        console.error("Error updating recruiter profile:", error);
+        setAlert({ open: true, message: "Error updating profile", severity: "error" });
+        return;
+      }
     }
+    setAlert({ open: true, message: "Profile updated successfully", severity: "success" });
+    setEditProfileId(null);
+    setFormData({ first_name: "", last_name: "", email: "", role: "candidate", source: "profiles" });
+    fetchProfiles();
   };
 
-  // Confirm deletion of a profile (only from the "profiles" table)
+  // Delete the record from its original table.
   const handleDeleteConfirm = async () => {
-    const id = deleteProfileId;
-    setDeleteProfileId(null);
-    const { error } = await supabase.from("profiles").delete().match({ id });
+    let error;
+    if (formData.source === "profiles") {
+      ({ error } = await supabase.from("profiles").delete().match({ id: deleteProfileId }));
+    } else if (formData.source === "recruiter_profiles") {
+      ({ error } = await supabase.from("recruiter_profiles").delete().match({ id: deleteProfileId }));
+    }
     if (error) {
       console.error("Error deleting profile:", error);
-      setAlert({
-        open: true,
-        message: "Error deleting profile",
-        severity: "error",
-      });
+      setAlert({ open: true, message: "Error deleting profile", severity: "error" });
     } else {
-      setAlert({
-        open: true,
-        message: "Profile deleted successfully",
-        severity: "success",
-      });
-      fetchProfiles();
+      setAlert({ open: true, message: "Profile deleted successfully", severity: "success" });
     }
+    fetchProfiles();
   };
 
-  // Compute key metrics and counts
+  // --- CHART DATA & COMPUTATIONS ---
   const totalProfiles = profiles.length;
   const roleCounts = useMemo(() => {
     const counts = { candidate: 0, recruiter: 0, admin: 0 };
@@ -198,7 +248,6 @@ const fetchAllAuthUsers = async () => {
     return counts;
   }, [profiles]);
 
-  // Prepare Bar Chart data (profiles count per role)
   const barData = {
     labels: Object.keys(roleCounts),
     datasets: [
@@ -220,7 +269,6 @@ const fetchAllAuthUsers = async () => {
     ],
   };
 
-  // Prepare Pie Chart data (profiles distribution)
   const pieData = {
     labels: Object.keys(roleCounts),
     datasets: [
@@ -242,7 +290,6 @@ const fetchAllAuthUsers = async () => {
     ],
   };
 
-  // Compute profile creation trend (assuming a created_at timestamp exists)
   const dateCounts = useMemo(() => {
     const counts = {};
     profiles.forEach((profile) => {
@@ -258,7 +305,6 @@ const fetchAllAuthUsers = async () => {
     return { labels: sortedDates, data: sortedCounts };
   }, [profiles]);
 
-  // Prepare Line Chart data (profile creation trend)
   const lineData = {
     labels: dateCounts.labels,
     datasets: [
@@ -273,7 +319,6 @@ const fetchAllAuthUsers = async () => {
     ],
   };
 
-  // Common chart container style
   const chartContainerStyle = {
     p: 2,
     backgroundColor: "#f4f4f4",
@@ -335,10 +380,7 @@ const fetchAllAuthUsers = async () => {
                 Distribution of profiles across roles.
               </Typography>
               <Box sx={{ height: 300 }}>
-                <Bar
-                  data={barData}
-                  options={{ maintainAspectRatio: false, responsive: true }}
-                />
+                <Bar data={barData} options={{ maintainAspectRatio: false, responsive: true }} />
               </Box>
             </Box>
           </Grid>
@@ -352,10 +394,7 @@ const fetchAllAuthUsers = async () => {
                 Proportional distribution of user roles.
               </Typography>
               <Box sx={{ height: 300 }}>
-                <Pie
-                  data={pieData}
-                  options={{ maintainAspectRatio: false, responsive: true }}
-                />
+                <Pie data={pieData} options={{ maintainAspectRatio: false, responsive: true }} />
               </Box>
             </Box>
           </Grid>
@@ -369,10 +408,7 @@ const fetchAllAuthUsers = async () => {
                 Profiles created over time.
               </Typography>
               <Box sx={{ height: 300 }}>
-                <Line
-                  data={lineData}
-                  options={{ maintainAspectRatio: false, responsive: true }}
-                />
+                <Line data={lineData} options={{ maintainAspectRatio: false, responsive: true }} />
               </Box>
             </Box>
           </Grid>
@@ -397,6 +433,7 @@ const fetchAllAuthUsers = async () => {
               last_name: "",
               email: "",
               role: "candidate",
+              source: "profiles",
             });
             setOpenCreateModal(true);
           }}
@@ -450,7 +487,10 @@ const fetchAllAuthUsers = async () => {
                   <Button
                     variant="outlined"
                     color="error"
-                    onClick={() => setDeleteProfileId(profile.id)}
+                    onClick={() => {
+                      setDeleteProfileId(profile.id);
+                      setFormData((prev) => ({ ...prev, source: profile.source }));
+                    }}
                   >
                     Delete
                   </Button>
@@ -484,12 +524,7 @@ const fetchAllAuthUsers = async () => {
               value={formData.email}
               onChange={handleChange}
             />
-            <Select
-              label="Role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-            >
+            <Select label="Role" name="role" value={formData.role} onChange={handleChange}>
               <MenuItem value="candidate">Candidate</MenuItem>
               <MenuItem value="recruiter">Recruiter</MenuItem>
               <MenuItem value="admin">Admin</MenuItem>
@@ -505,10 +540,7 @@ const fetchAllAuthUsers = async () => {
       </Dialog>
 
       {/* EDIT PROFILE MODAL */}
-      <Dialog
-        open={Boolean(editProfileId)}
-        onClose={() => setEditProfileId(null)}
-      >
+      <Dialog open={Boolean(editProfileId)} onClose={() => setEditProfileId(null)}>
         <DialogTitle>Edit Profile</DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
@@ -530,12 +562,7 @@ const fetchAllAuthUsers = async () => {
               value={formData.email}
               onChange={handleChange}
             />
-            <Select
-              label="Role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-            >
+            <Select label="Role" name="role" value={formData.role} onChange={handleChange} disabled>
               <MenuItem value="candidate">Candidate</MenuItem>
               <MenuItem value="recruiter">Recruiter</MenuItem>
               <MenuItem value="admin">Admin</MenuItem>
@@ -567,10 +594,7 @@ const fetchAllAuthUsers = async () => {
       </Snackbar>
 
       {/* DELETE CONFIRMATION DIALOG */}
-      <Dialog
-        open={Boolean(deleteProfileId)}
-        onClose={() => setDeleteProfileId(null)}
-      >
+      <Dialog open={Boolean(deleteProfileId)} onClose={() => setDeleteProfileId(null)}>
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           Are you sure you want to delete this profile?
