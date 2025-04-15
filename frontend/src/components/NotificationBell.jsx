@@ -19,7 +19,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
-import { notificationService } from '../services/notificationService';
+import notificationService from '../services/notificationService';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 

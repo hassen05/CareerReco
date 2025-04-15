@@ -5,6 +5,9 @@ import {
   ListItemText, Divider, Chip, CircularProgress
 } from '@mui/material';
 import { supabase } from '../supabaseClient';
+import notificationService from '../services/notificationService';
+
+
 import { useNavigate } from 'react-router-dom';
 import { 
   WorkOutline, SchoolOutlined, CodeOutlined, LanguageOutlined,

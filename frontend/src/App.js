@@ -24,6 +24,7 @@ import PublicProfilePage from './pages/PublicProfilePage';
 import InterviewTrainer from './pages/InterviewTrainer';
 import { supabase } from './supabaseClient';
 import { AuthProvider } from './contexts/AuthContext';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   const location = useLocation();
@@ -117,6 +118,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+  path="/admin"
+  element={
+    <ProtectedRoute >
+      <AdminDashboard />
+    </ProtectedRoute>
+  }
+/>
+
         </Routes>
         <Footer />
       </ThemeProvider>

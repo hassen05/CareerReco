@@ -62,11 +62,8 @@ const notificationService = {
   // Create a new notification
   async createNotification(userId, type, message, data = {}) {
     try {
-      // Get the current user
       const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) {
-        throw new Error('User not authenticated');
-      }
+      if (!currentUser) throw new Error('User not authenticated');
 
       console.log('Creating notification with data:', { 
         userId, 
@@ -75,8 +72,7 @@ const notificationService = {
         data,
         currentUserId: currentUser.id 
       });
-      
-      // Create the notification using the PostgreSQL function
+
       const { data: result, error } = await supabase
         .rpc('create_notification', {
           p_user_id: userId,
@@ -90,12 +86,6 @@ const notificationService = {
 
       if (error) {
         console.error('Error creating notification:', error);
-        console.error('Error details:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        });
         throw error;
       }
 
@@ -127,6 +117,7 @@ const notificationService = {
     }
   },
 
+  // Subscribe to notifications in real-time
   subscribeToNotifications(callback) {
     const subscription = supabase
       .channel('notifications')
@@ -145,4 +136,4 @@ const notificationService = {
   }
 };
 
-export { notificationService };
+export default notificationService;
