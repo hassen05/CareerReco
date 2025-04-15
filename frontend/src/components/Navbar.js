@@ -13,15 +13,12 @@ import {
   Typography,
   useScrollTrigger,
   Avatar,
-  Tooltip,
-  Badge
+  alpha
 } from '@mui/material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import { supabase } from '../supabaseClient';
 import { motion } from 'framer-motion';
-import { AccountCircle, Notifications, WorkOutline } from '@mui/icons-material';
-import { alpha } from '@mui/material/styles';
 import { useAuth } from '../contexts/AuthContext';
 
 // Hide AppBar on scroll
@@ -37,46 +34,68 @@ function HideOnScroll(props) {
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
-  const navigate = useNavigate();
-  const { user: authUser } = useAuth();
 
-  // Primary navigation links
+  // Primary navigation links - visible for all roles.
   const navLinks = [
     { label: "Home", path: "/" },
     { label: "About", path: "/about" },
   ];
-  
-  // Add recruiter-specific links
-  const recruiterLinks = userRole === 'recruiter' ? [
+
+  // Recruiter (and admin) specific links.
+  const recruiterLinks = (userRole === 'recruiter' || userRole === 'admin') ? [
     { label: "Find Candidates", path: "/recommend" }
   ] : [];
-  
-  // Combine all navigation links
+
+  // Combine navigation links.
   const allLinks = [...navLinks, ...recruiterLinks];
 
-  // Fetch user data and set up auth listener
   useEffect(() => {
     const fetchUserData = async () => {
+      // Get the currently authenticated user.
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        setUserRole(user.user_metadata?.role || 'candidate');
+        // Fetch the user's role from the "profiles" table.
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (error) {
+          console.error("Error fetching profile:", error);
+          setUserRole(null);
+        } else {
+          setUserRole(profile.role); // Example values: "admin", "candidate", "recruiter"
+        }
       } else {
         setUser(null);
         setUserRole(null);
       }
     };
-    
+
     fetchUserData();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    // Listen for auth state changes and update user and role accordingly.
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setUser(session.user);
-        setUserRole(session.user.user_metadata?.role || 'candidate');
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        if (error) {
+          console.error("Error fetching profile on auth change:", error);
+          setUserRole(null);
+        } else {
+          setUserRole(profile.role);
+        }
       } else {
         setUser(null);
         setUserRole(null);
@@ -88,7 +107,7 @@ const Navbar = () => {
     };
   }, []);
 
-  // Handle auth actions
+  // Handle logout.
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -99,7 +118,7 @@ const Navbar = () => {
     }
   };
 
-  // Menu handlers
+  // Menu handlers.
   const handleMobileMenuOpen = (event) => {
     setMobileMenuAnchor(event.currentTarget);
   };
@@ -107,16 +126,16 @@ const Navbar = () => {
   const handleMobileMenuClose = () => {
     setMobileMenuAnchor(null);
   };
-  
+
   const handleProfileMenuOpen = (event) => {
     setProfileMenuAnchor(event.currentTarget);
   };
-  
+
   const handleProfileMenuClose = () => {
     setProfileMenuAnchor(null);
   };
 
-  // Style constants
+  // Common button styling.
   const buttonStyle = {
     fontWeight: 600,
     textTransform: 'none',
@@ -127,7 +146,7 @@ const Navbar = () => {
     transition: 'all 0.2s ease'
   };
 
-  // Mobile Menu
+  // Mobile Menu rendering.
   const renderMobileMenu = (
     <Menu
       anchorEl={mobileMenuAnchor}
@@ -179,8 +198,9 @@ const Navbar = () => {
           {link.label}
         </MenuItem>
       ))}
-      
-      {userRole === 'candidate' && (
+
+      {/* Interview Trainer: now available for candidates and admins */}
+      {(userRole === 'candidate' || userRole === 'admin') && (
         <MenuItem
           component={Link}
           to="/interview-trainer"
@@ -199,9 +219,30 @@ const Navbar = () => {
           Interview Trainer
         </MenuItem>
       )}
-      
+
+      {/* Admin dashboard for admin role. */}
+      {userRole === 'admin' && (
+        <MenuItem
+          component={Link}
+          to="/admin-dashboard"
+          onClick={handleMobileMenuClose}
+          sx={{
+            color: location.pathname === '/admin-dashboard' ? 'primary.main' : 'text.primary',
+            fontWeight: location.pathname === '/admin-dashboard' ? 600 : 500,
+            py: 1.2,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: alpha('#553d8e', 0.04),
+              transform: 'translateX(5px)'
+            }
+          }}
+        >
+          Admin dashboard
+        </MenuItem>
+      )}
+
       <Divider sx={{ my: 1.5 }} />
-      
+
       <Box sx={{ px: 2, py: 1.5 }}>
         {user ? (
           <>
@@ -300,8 +341,8 @@ const Navbar = () => {
       </Box>
     </Menu>
   );
-  
-  // Profile Menu (desktop)
+
+  // Desktop Profile Menu.
   const renderProfileMenu = (
     <Menu
       anchorEl={profileMenuAnchor}
@@ -333,29 +374,35 @@ const Navbar = () => {
       transformOrigin={{ horizontal: 'right', vertical: 'top' }}
       anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
     >
-      <MenuItem onClick={() => {
-        navigate('/profile');
-        handleProfileMenuClose();
-      }} sx={{ py: 1.2 }}>
+      <MenuItem
+        onClick={() => {
+          navigate('/profile');
+          handleProfileMenuClose();
+        }}
+        sx={{ py: 1.2 }}
+      >
         My Profile
       </MenuItem>
-      
-      <MenuItem onClick={() => {
-        navigate('/settings');
-        handleProfileMenuClose();
-      }} sx={{ py: 1.2 }}>
+      <MenuItem
+        onClick={() => {
+          navigate('/settings');
+          handleProfileMenuClose();
+        }}
+        sx={{ py: 1.2 }}
+      >
         Account Settings
       </MenuItem>
-      
       <Divider sx={{ my: 1 }} />
-      
-      <MenuItem onClick={handleLogout} sx={{ 
-        py: 1.2,
-        color: 'error.main',
-        '&:hover': {
-          backgroundColor: alpha('#f44336', 0.04)
-        }
-      }}>
+      <MenuItem
+        onClick={handleLogout}
+        sx={{
+          py: 1.2,
+          color: 'error.main',
+          '&:hover': {
+            backgroundColor: alpha('#f44336', 0.04),
+          },
+        }}
+      >
         Logout
       </MenuItem>
     </Menu>
@@ -363,21 +410,21 @@ const Navbar = () => {
 
   return (
     <HideOnScroll>
-      <AppBar 
-        position="sticky" 
+      <AppBar
+        position="sticky"
         color="default"
         sx={{
           backgroundColor: 'rgba(255, 255, 255, 0.9)',
           backdropFilter: 'blur(8px)',
           boxShadow: '0 2px 20px rgba(0,0,0,0.03)',
-          borderBottom: '1px solid rgba(0,0,0,0.05)'
+          borderBottom: '1px solid rgba(0,0,0,0.05)',
         }}
       >
         <Container maxWidth="xl">
           <Toolbar sx={{ py: { xs: 1, md: 0.5 } }}>
             {/* Logo */}
-            <Box component={Link} to="/" sx={{ 
-              display: 'flex', 
+            <Box component={Link} to="/" sx={{
+              display: 'flex',
               alignItems: 'center',
               textDecoration: 'none'
             }}>
@@ -385,10 +432,10 @@ const Navbar = () => {
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
-                <Typography 
-                  variant="h5" 
+                <Typography
+                  variant="h5"
                   component="div"
-                  sx={{ 
+                  sx={{
                     fontWeight: 700,
                     background: 'linear-gradient(45deg, #553d8e 30%, #9575cd 90%)',
                     WebkitBackgroundClip: 'text',
@@ -400,9 +447,9 @@ const Navbar = () => {
               </motion.div>
             </Box>
 
-            {/* Desktop Links */}
-            <Box sx={{ 
-              display: { xs: 'none', md: 'flex' }, 
+            {/* Desktop Navigation Links */}
+            <Box sx={{
+              display: { xs: 'none', md: 'flex' },
               gap: 2,
               alignItems: 'center',
               ml: 4
@@ -445,57 +492,93 @@ const Navbar = () => {
                   </Button>
                 </motion.div>
               ))}
-            </Box>
 
-            {userRole === 'candidate' && (
-              <motion.div whileHover={{ scale: 1.03 }}>
-                <Button
-                  component={Link}
-                  to="/interview-trainer"
-                  sx={{
-                    color: location.pathname === '/interview-trainer' ? 'primary.main' : 'text.secondary',
-                    fontWeight: location.pathname === '/interview-trainer' ? 600 : 500,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    position: 'relative',
-                    '&:hover': {
-                      backgroundColor: 'transparent',
-                      color: 'primary.main',
-                    },
-                    '&::after': {
-                      content: '""',
-                      position: 'absolute',
-                      bottom: -2,
-                      left: 0,
-                      width: location.pathname === '/interview-trainer' ? '100%' : '0',
-                      height: '2px',
-                      backgroundColor: 'primary.main',
-                      transition: 'width 0.3s ease'
-                    },
-                    '&:hover::after': {
-                      width: '100%'
-                    }
-                  }}
-                >
-                  Interview Trainer
-                </Button>
-              </motion.div>
-            )}
+              {/* Interview Trainer button: visible for candidates and admins */}
+              {(userRole === 'candidate' || userRole === 'admin') && (
+                <motion.div whileHover={{ scale: 1.03 }}>
+                  <Button
+                    component={Link}
+                    to="/interview-trainer"
+                    sx={{
+                      color: location.pathname === '/interview-trainer' ? 'primary.main' : 'text.secondary',
+                      fontWeight: location.pathname === '/interview-trainer' ? 600 : 500,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      position: 'relative',
+                      '&:hover': {
+                        backgroundColor: 'transparent',
+                        color: 'primary.main',
+                      },
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        bottom: -2,
+                        left: 0,
+                        width: location.pathname === '/interview-trainer' ? '100%' : '0',
+                        height: '2px',
+                        backgroundColor: 'primary.main',
+                        transition: 'width 0.3s ease'
+                      },
+                      '&:hover::after': {
+                        width: '100%'
+                      }
+                    }}
+                  >
+                    Interview Trainer
+                  </Button>
+                </motion.div>
+              )}
+
+              {/* Admin dashboard button: for admin role */}
+              {userRole === 'admin' && (
+                <motion.div whileHover={{ scale: 1.03 }}>
+                  <Button
+                    component={Link}
+                    to="/admin-dashboard"
+                    sx={{
+                      color: location.pathname === '/admin-dashboard' ? 'primary.main' : 'text.secondary',
+                      fontWeight: location.pathname === '/admin-dashboard' ? 600 : 500,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      position: 'relative',
+                      '&:hover': {
+                        backgroundColor: 'transparent',
+                        color: 'primary.main',
+                      },
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        bottom: -2,
+                        left: 0,
+                        width: location.pathname === '/admin-dashboard' ? '100%' : '0',
+                        height: '2px',
+                        backgroundColor: 'primary.main',
+                        transition: 'width 0.3s ease'
+                      },
+                      '&:hover::after': {
+                        width: '100%'
+                      }
+                    }}
+                  >
+                    Admin dashboard
+                  </Button>
+                </motion.div>
+              )}
+            </Box>
 
             <Box sx={{ flexGrow: 1 }} />
 
             {/* Auth Section */}
-            <Box sx={{ 
-              display: { xs: 'none', md: 'flex' }, 
-              gap: 2, 
+            <Box sx={{
+              display: { xs: 'none', md: 'flex' },
+              gap: 2,
               alignItems: 'center'
             }}>
               {user ? (
                 <>
-                  {/* User is logged in */}
                   <IconButton
                     onClick={handleProfileMenuOpen}
-                    sx={{ 
+                    sx={{
                       ml: 2,
                       p: 1,
                       borderRadius: '50%',
@@ -506,8 +589,8 @@ const Navbar = () => {
                       }
                     }}
                   >
-                    <Avatar 
-                      alt={user.email} 
+                    <Avatar
+                      alt={user.email}
                       src="/avatar-placeholder.jpg"
                       sx={{
                         width: 36,
@@ -522,7 +605,6 @@ const Navbar = () => {
                 </>
               ) : (
                 <>
-                  {/* User is not logged in */}
                   <motion.div whileHover={{ scale: 1.03 }}>
                     <Button
                       color="primary"
@@ -540,7 +622,6 @@ const Navbar = () => {
                       Login
                     </Button>
                   </motion.div>
-                  
                   <motion.div whileHover={{ scale: 1.03, y: -2 }}>
                     <Button
                       color="primary"
@@ -568,7 +649,7 @@ const Navbar = () => {
               edge="end"
               onClick={handleMobileMenuOpen}
               color="primary"
-              sx={{ 
+              sx={{
                 display: { md: 'none' },
                 ml: 1
               }}
@@ -577,8 +658,8 @@ const Navbar = () => {
             </IconButton>
           </Toolbar>
         </Container>
-        
-        {/* Menus */}
+
+        {/* Render Mobile and Profile Menus */}
         {renderMobileMenu}
         {renderProfileMenu}
       </AppBar>

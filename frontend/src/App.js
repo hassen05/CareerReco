@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { Container, CssBaseline } from '@mui/material';
+import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from './styles/theme';
 import Navbar from './components/Navbar';
@@ -47,14 +47,17 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<HomePage />} />
+          
+          {/* The /recommend route is available for recruiters and admin */}
           <Route 
-            path="/recommend" 
-            element={
-              <ProtectedRoute requiredRole="recruiter">
-                <ResumeRecommender />
-              </ProtectedRoute>
-            }
-          />
+  path="/recommend" 
+  element={
+    <ProtectedRoute requiredRole="recruiter">
+      <ResumeRecommender />
+    </ProtectedRoute>
+  }
+/>
+
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/signup" element={<RoleSelection />} />
@@ -119,14 +122,13 @@ function App() {
             }
           />
           <Route
-  path="/admin"
-  element={
-    <ProtectedRoute >
-      <AdminDashboard />
-    </ProtectedRoute>
-  }
-/>
-
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
         <Footer />
       </ThemeProvider>
