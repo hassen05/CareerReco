@@ -1,9 +1,9 @@
 import React from 'react';
-import { 
-  Container, 
-  Box, 
-  Typography, 
-  Grid, 
+import {
+  Container,
+  Box,
+  Typography,
+  Grid,
   Avatar,
   Card,
   Stack,
@@ -13,26 +13,44 @@ import { motion } from 'framer-motion';
 import { alpha } from '@mui/system';
 import PageHero from '../components/PageHero';
 
-// Team member data
+// Real Team Members
 const teamMembers = [
   {
-    name: "Sarah Johnson",
-    role: "Founder & CEO",
-    image: "/team/sarah.jpg", // Add actual image paths
-    bio: "Former HR executive with 15 years of experience in talent acquisition",
+    name: "Amira Chérif",
+    role: "UI/UX Designer",
+    image: "/team/amira.jpg",
+    bio: "Creative designer responsible for the visual interface and user experience of the platform."
   },
   {
-    name: "Michael Chen",
-    role: "Chief Technology Officer",
-    image: "/team/michael.jpg",
-    bio: "AI researcher and full-stack developer with expertise in ML algorithms",
+    name: "Hassen Ben Ameur",
+    role: "Backend Developer",
+    image: "/team/hassen.jpg",
+    bio: "In charge of server-side logic, APIs, and database management for scalable performance."
   },
   {
-    name: "Emma Williams",
-    role: "Head of Product",
-    image: "/team/emma.jpg",
-    bio: "Product strategist focused on creating intuitive HR tech solutions",
+    name: "Meriem Zouid",
+    role: "Machine Learning Engineer",
+    image: "/team/meriem.jpg",
+    bio: "Developed and trained ranking algorithms that power the intelligent CV evaluation engine."
   },
+  {
+    name: "Mohamed Ali Bouzir",
+    role: "QA & Testing Lead",
+    image: "/team/mohamed.jpg",
+    bio: "Ensured platform stability, functionality, and performance through iterative testing cycles."
+  },
+  {
+    name: "Omar Bacha",
+    role: "Project Manager & Group Creator",
+    image: "/team/omar.jpg",
+    bio: "Led the Career Center Platform project, overseeing planning, coordination, and execution."
+  },
+  {
+    name: "Yazid Slim",
+    role: "Frontend Developer",
+    image: "/team/yazid.jpg",
+    bio: "Implemented responsive and dynamic user interfaces using modern web technologies."
+  }
 ];
 
 // Company values
@@ -40,22 +58,22 @@ const values = [
   {
     title: "Innovation",
     icon: "💡",
-    description: "Pushing boundaries in AI and recruitment technology"
+    description: "Pushing boundaries in AI-driven recruitment and user-centered design."
   },
   {
     title: "Fairness",
     icon: "⚖️",
-    description: "Ensuring unbiased and equitable hiring practices"
+    description: "Building technology that promotes unbiased and inclusive hiring decisions."
   },
   {
     title: "Privacy",
     icon: "🔒",
-    description: "Maintaining the highest standards of data protection"
+    description: "Ensuring data protection and confidentiality at every stage of the recruitment process."
   },
   {
     title: "Excellence",
     icon: "🌟",
-    description: "Delivering outstanding results for our clients"
+    description: "Delivering top-tier solutions that empower recruiters and job seekers alike."
   },
 ];
 
@@ -63,8 +81,8 @@ const AboutUs = () => {
   return (
     <Box>
       <PageHero 
-        title="About Us" 
-        subtitle="Revolutionizing recruitment through AI innovation"
+        title="About Us"
+        subtitle="The team behind the Career Center Platform – Innovating how hiring works"
         image="/AboutUs.jpg"
       />
 
@@ -76,39 +94,39 @@ const AboutUs = () => {
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <Box sx={{ 
+          <Box sx={{
             textAlign: 'center',
             maxWidth: 800,
             mx: 'auto',
             mb: 8
           }}>
-            <Typography variant="h4" gutterBottom sx={{ 
+            <Typography variant="h4" gutterBottom sx={{
               fontWeight: 700,
               color: 'primary.main',
               mb: 3
             }}>
               Our Mission
             </Typography>
-            <Typography variant="h6" sx={{ 
+            <Typography variant="h6" sx={{
               color: 'text.secondary',
               lineHeight: 1.8,
               fontSize: { xs: '1.1rem', md: '1.25rem' }
             }}>
-              At ResumeRec, we're dedicated to transforming the hiring process through 
-              cutting-edge AI technology. Our mission is to connect organizations with 
-              their ideal candidates while eliminating bias and reducing time-to-hire.
+              We are the minds behind the Career Center Platform — an AI-powered recruitment solution designed
+              to reduce hiring bias, streamline CV ranking, and accelerate the hiring process. Through the CRYSPDM methodology,
+              our team has delivered a smart and efficient tool that transforms how recruiters find the right talent.
             </Typography>
           </Box>
         </motion.div>
 
         {/* Values Section */}
         <Grid container spacing={4} sx={{ mb: 8 }}>
-          {values.map((value, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
+          {values.map((value) => (
+            <Grid item xs={12} sm={6} md={3} key={value.title}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
+                transition={{ duration: 0.6 }}
                 viewport={{ once: true }}
               >
                 <Card sx={{
@@ -141,7 +159,7 @@ const AboutUs = () => {
 
         {/* Team Section */}
         <Box sx={{ mb: 8 }}>
-          <Typography variant="h4" sx={{ 
+          <Typography variant="h4" sx={{
             textAlign: 'center',
             fontWeight: 700,
             color: 'primary.main',
@@ -150,12 +168,12 @@ const AboutUs = () => {
             Meet Our Team
           </Typography>
           <Grid container spacing={4}>
-            {teamMembers.map((member, index) => (
-              <Grid item xs={12} md={4} key={index}>
+            {teamMembers.map((member) => (
+              <Grid item xs={12} md={4} key={member.name}>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  transition={{ duration: 0.6 }}
                   viewport={{ once: true }}
                 >
                   <Card sx={{
@@ -174,6 +192,7 @@ const AboutUs = () => {
                     <Stack spacing={3} alignItems="center">
                       <Avatar
                         src={member.image}
+                        alt={member.name}
                         sx={{
                           width: 120,
                           height: 120,
@@ -205,4 +224,4 @@ const AboutUs = () => {
   );
 };
 
-export default AboutUs; 
+export default AboutUs;

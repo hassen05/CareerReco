@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import CandidateProfilePage from './CandidateProfilePage';
 import RecruiterProfilePage from './RecruiterProfilePage';
-import notificationService from '../services/notificationService';
+import { notificationService } from '../services/notificationService';
 import { useAuth } from '../contexts/AuthContext';
 
 function ProfilePage() {

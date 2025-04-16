@@ -78,6 +78,14 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
+    "https://career-reco.vercel.app",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://career-reco.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:3001",
+
     "http://localhost:19000",  # Expo development server
     "http://localhost:19001",
     "http://localhost:19002",
