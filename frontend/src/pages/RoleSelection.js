@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box, Button, Typography, Container, Paper } from '@mui/material';
-import { motion } from 'framer-motion';
 import { alpha } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
 

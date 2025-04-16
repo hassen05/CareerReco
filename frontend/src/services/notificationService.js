@@ -145,4 +145,4 @@ const notificationService = {
   }
 };
 
-export { notificationService };
+export default notificationService;
