@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Container, Typography, Box, Avatar, Button, Paper, Grid, 
   IconButton, Card, Stack, List, ListItem, ListItemAvatar,
-  ListItemText, Divider, Chip, CircularProgress
+  ListItemText, Divider, Chip, CircularProgress, Tooltip
 } from '@mui/material';
 import { supabase } from '../supabaseClient';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -10,26 +10,13 @@ import ErrorSnackbar from '../components/ErrorSnackbar';
 
 import { useNavigate } from 'react-router-dom';
 import { 
-  WorkOutline, SchoolOutlined, CodeOutlined, LanguageOutlined,
-  EditOutlined, DownloadOutlined, Email, 
-  Phone, LinkedIn, GitHub, Twitter, CardMembershipOutlined,
-  Business, Visibility
+  WorkOutline, CodeOutlined, LanguageOutlined,
+  EditOutlined, DownloadOutlined, EmailOutlined,
+  PhoneOutlined, LinkedIn, GitHub, CardMembershipOutlined,
+  Business, Visibility, DeleteOutlined, SchoolOutlined
 } from '@mui/icons-material';
 import { useTheme, styled, alpha } from '@mui/material/styles';
 
-const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
-  marginBottom: theme.spacing(4),
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  borderRadius: theme.shape.borderRadius * 3,
-  backgroundColor: alpha(theme.palette.background.paper, 0.98),
-  boxShadow: `0 10px 40px -10px ${alpha(theme.palette.primary.main, 0.1)}`,
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: `0 20px 40px -20px ${alpha(theme.palette.primary.main, 0.2)}`,
-  },
-}));
 
 const SectionHeader = ({ icon, title }) => (
   <Box sx={{ 
@@ -49,17 +36,6 @@ const SectionHeader = ({ icon, title }) => (
   </Box>
 );
 
-const DetailChip = styled(Box)(({ theme }) => ({
-  backgroundColor: alpha(theme.palette.primary.main, 0.1),
-  color: theme.palette.primary.main,
-  padding: theme.spacing(0.5, 1.5),
-  borderRadius: theme.shape.borderRadius,
-  fontSize: '0.9rem',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: theme.spacing(1),
-  margin: theme.spacing(0.5)
-}));
 
 function CandidateProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -76,31 +52,6 @@ function CandidateProfilePage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState('');
-  const [confirmType, setConfirmType] = useState('profile'); // 'profile' or 'resume'
-
-  // Delete profile handler
-  const handleDeleteProfile = async () => {
-    setDeleteLoading(true);
-    try {
-      // Remove user profile from supabase
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error('Not authenticated');
-      const { error: deleteError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', user.id);
-      if (deleteError) throw deleteError;
-      // Optionally, sign out user and redirect
-      await supabase.auth.signOut();
-      navigate('/');
-    } catch (err) {
-      setSnackbarMsg(err.message || 'Failed to delete profile');
-      setSnackbarOpen(true);
-    } finally {
-      setDeleteLoading(false);
-      setConfirmOpen(false);
-    }
-  };
 
   // Delete resume handler
   const handleDeleteResume = async () => {
@@ -322,8 +273,8 @@ function CandidateProfilePage() {
 
         // Process notifications into profile views
         const views = notifications.map(notification => ({
-          company_name: notification.data?.company_name || 'Company',
-          profile_picture: notification.data?.profile_picture,
+          company_name: notification.data?.viewer_company || 'Company',
+          profile_picture: notification.data?.viewer_profile_picture,
           viewed_at: notification.created_at
         }));
         
@@ -353,58 +304,7 @@ function CandidateProfilePage() {
     return field;
   };
 
-  const renderDetailSection = (items, icon, title) => (
-    <Box sx={{ mb: 3 }}>
-      <SectionHeader icon={icon} title={title} />
-      <Box sx={{ 
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-        gap: 1.5,
-        alignItems: 'start'
-      }}>
-        {items.map((item, index) => (
-          <DetailChip key={index} sx={{ width: '100%' }}>
-            {icon && React.cloneElement(icon, { fontSize: 'small' })}
-            {item}
-          </DetailChip>
-        ))}
-      </Box>
-    </Box>
-  );
-
-  const renderExperienceEducation = (items, icon, title) => (
-    <Box>
-      <SectionHeader icon={icon} title={title} />
-      {items.map((item, index) => (
-        <Card key={index} sx={{ 
-          mb: 2, 
-          p: 2,
-          backgroundColor: alpha(theme.palette.background.paper, 0.9),
-          boxShadow: theme.shadows[2]
-        }}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            {item.position ? 'Position: ' : 'Degree: '}{item.position || item.degree}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {item.company ? 'Company: ' : 'Institution: '}{item.company || item.institution}
-          </Typography>
-          <DetailChip sx={{ mt: 1, mb: 1.5 }}>
-            {item.start_date} - {item.end_date || 'Present'}
-          </DetailChip>
-          {item.description && (
-            <Typography variant="body2" sx={{ 
-              mt: 1,
-              lineHeight: 1.6,
-              color: 'text.secondary'
-            }}>
-              {item.description}
-            </Typography>
-          )}
-        </Card>
-      ))}
-    </Box>
-  );
-
+  
   const renderProfileViews = () => {
     // Check if we have any profile views data to display
     console.log('Profile views to render:', profileViews);
@@ -527,251 +427,406 @@ function CandidateProfilePage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <StyledPaper>
-        <Box sx={{ textAlign: 'center', mb: 4 }}>
-          <Avatar
-            src={profile.profile_picture}
-            sx={{ 
-              width: 120,
-              height: 120,
-              mb: 3,
-              border: `2px solid ${theme.palette.divider}`,
-              mx: 'auto'
-            }}
-          />
-          <Typography variant="h3" fontWeight={800} gutterBottom>
-            {profile.first_name} {profile.last_name}
-          </Typography>
-          
-          {profile.bio && (
-            <Typography variant="body1" color="text.secondary" sx={{ 
-              maxWidth: '600px',
-              mx: 'auto',
-              mb: 3
-            }}>
-              {profile.bio}
-            </Typography>
-          )}
-
-          <Stack direction="row" spacing={2} justifyContent="center">
-            {profile.email && (
-              <DetailChip sx={{ px: 2, py: 1 }}>
-                <Email sx={{ color: 'primary.main', mr: 1 }} />
-                {profile.email}
-              </DetailChip>
-            )}
-            {profile.phone && (
-              <DetailChip sx={{ px: 2, py: 1 }}>
-                <Phone sx={{ color: 'primary.main', mr: 1 }} />
-                {profile.phone}
-              </DetailChip>
-            )}
-          </Stack>
-
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
-            {profile.linkedin && (
-              <IconButton 
-                component="a" 
-                href={profile.linkedin} 
-                target="_blank" 
-                rel="noopener"
-                color="primary"
-              >
-                <LinkedIn />
-              </IconButton>
-            )}
-            {profile.github && (
-              <IconButton 
-                component="a" 
-                href={profile.github} 
-                target="_blank" 
-                rel="noopener"
-                color="primary"
-              >
-                <GitHub />
-              </IconButton>
-            )}
-            {profile.twitter && (
-              <IconButton 
-                component="a" 
-                href={profile.twitter} 
-                target="_blank" 
-                rel="noopener"
-                color="primary"
-              >
-                <Twitter />
-              </IconButton>
-            )}
-          </Box>
-        </Box>
-
-        {resume ? (
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={4}>
-              <Box sx={{ position: 'sticky', top: 20 }}>
-                {resume.skills?.length > 0 && renderDetailSection(
-                  parseField(resume.skills),
-                  <CodeOutlined />,
-                  "Core Skills"
-                )}
-                {resume.languages?.length > 0 && renderDetailSection(
-                  parseField(resume.languages),
-                  <LanguageOutlined />,
-                  "Languages"
-                )}
-                {resume.certifications?.length > 0 && renderDetailSection(
-                  parseField(resume.certifications),
-                  <CardMembershipOutlined />,
-                  "Certifications"
-                )}
-              </Box>
-            </Grid>
-
-            <Grid item xs={12} md={8}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {resume.experience?.length > 0 && renderExperienceEducation(
-                  parseField(resume.experience),
-                  <WorkOutline />,
-                  "Professional Experience"
-                )}
-                {resume.education?.length > 0 && renderExperienceEducation(
-                  parseField(resume.education),
-                  <SchoolOutlined />,
-                  "Education"
-                )}
-              </Box>
-            </Grid>
-          </Grid>
-        ) : (
-          <Paper sx={{ p: 4, textAlign: 'center', border: `1px dashed ${theme.palette.divider}` }}>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-              No resume created yet
-            </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<EditOutlined />}
-              onClick={() => navigate('/resume/create')}
-              sx={{ borderRadius: 2 }}
+    <Container maxWidth="lg" sx={{ py: 6 }}>
+      {/* Profile Header */}
+      <Box
+        sx={{
+          position: 'relative',
+          mb: 7,
+          borderRadius: 4,
+          overflow: 'hidden',
+          boxShadow: '0 10px 40px 0 rgba(0,0,0,0.06)',
+        }}
+      >
+        {/* Banner Background */}
+        <Box
+          sx={{
+            height: 180,
+            width: '100%',
+            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+            position: 'relative',
+            opacity: 0.9,
+          }}
+        />
+        
+        {/* Profile Content Card */}
+        <Card
+          sx={{
+            mx: { xs: 2, md: 6 },
+            mt: -8,
+            mb: 2,
+            borderRadius: 3,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+            position: 'relative',
+            overflow: 'visible',
+            bgcolor: 'background.paper',
+          }}
+          elevation={0}
+        >
+          {/* Avatar - positioned to overlap the banner */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' },
+            p: { xs: 3, md: 4 },
+            alignItems: { xs: 'center', md: 'flex-start' },
+          }}>
+            <Avatar 
+              src={profile.profile_picture}
+              alt={`${profile.first_name} ${profile.last_name}`}
+              sx={{ 
+                width: 130, 
+                height: 130,
+                border: '4px solid #fff',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+                fontSize: 50,
+                bgcolor: theme.palette.primary.main,
+                color: '#fff',
+                mb: { xs: 3, md: 0 },
+                mr: { md: 4 },
+                objectFit: 'cover'
+              }}
             >
-              Create Resume
-            </Button>
-          </Paper>
-        )}
-
-        {renderProfileViews()}
-
-        <Box sx={{ 
-          mt: 4,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-          pt: 3
-        }}>
+              {profile.first_name ? profile.first_name[0].toUpperCase() : '?'}
+            </Avatar>
+            
+            <Box sx={{ flex: 1 }}>
+              <Typography 
+                variant="h3" 
+                sx={{ 
+                  fontWeight: 600, 
+                  letterSpacing: -0.5,
+                  fontSize: { xs: '2rem', md: '2.5rem' },
+                }}
+              >
+                {profile.first_name} {profile.last_name}
+              </Typography>
+              
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  mt: 1, 
+                  mb: 3, 
+                  color: 'text.secondary',
+                  fontSize: '1.05rem',
+                  lineHeight: 1.6,
+                  maxWidth: '650px'
+                }}
+              >
+                {profile.bio || 'No bio available'}
+              </Typography>
+              
+              <Stack 
+                direction="row" 
+                spacing={1.5} 
+                sx={{ 
+                  mb: 0.5,
+                  justifyContent: { xs: 'center', md: 'flex-start' } 
+                }}
+              >
+                {profile.email && (
+                  <Tooltip title="Email">
+                    <IconButton 
+                      aria-label="email" 
+                      component="a" 
+                      href={`mailto:${profile.email}`}
+                      color="primary"
+                      sx={{ 
+                        bgcolor: alpha(theme.palette.primary.main, 0.08), 
+                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
+                      }}
+                      size="small"
+                    >
+                      <EmailOutlined fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                
+                {profile.phone && (
+                  <Tooltip title="Phone">
+                    <IconButton 
+                      aria-label="phone" 
+                      component="a" 
+                      href={`tel:${profile.phone}`}
+                      color="primary"
+                      sx={{ 
+                        bgcolor: alpha(theme.palette.primary.main, 0.08), 
+                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
+                      }}
+                      size="small"
+                    >
+                      <PhoneOutlined fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                
+                {profile.linkedin && (
+                  <Tooltip title="LinkedIn">
+                    <IconButton 
+                      aria-label="linkedin" 
+                      component="a" 
+                      href={profile.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      color="primary"
+                      sx={{ 
+                        bgcolor: alpha(theme.palette.primary.main, 0.08), 
+                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
+                      }}
+                      size="small"
+                    >
+                      <LinkedIn fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                
+                {profile.github && (
+                  <Tooltip title="GitHub">
+                    <IconButton 
+                      aria-label="github" 
+                      component="a" 
+                      href={profile.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      color="primary"
+                      sx={{ 
+                        bgcolor: alpha(theme.palette.primary.main, 0.08), 
+                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
+                      }}
+                      size="small"
+                    >
+                      <GitHub fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Stack>
+            </Box>
+          </Box>
+        </Card>
+        
+        {/* Actions Bar - Floating below profile card */}
+        <Card
+          sx={{
+            mx: { xs: 2, md: 6 },
+            mb: 2,
+            py: 1.5,
+            px: 2,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            justifyContent: 'center',
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+            bgcolor: alpha('#fff', 0.9),
+          }}
+          elevation={0}
+        >
           <Button
             variant="contained"
+            disableElevation
             startIcon={<EditOutlined />}
             onClick={() => navigate('/profile/edit')}
-            sx={{ borderRadius: 50, px: 4 }}
+            size="medium"
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontSize: '0.9rem',
+              px: 2,
+              py: 0.75,
+              bgcolor: theme.palette.primary.main,
+              '&:hover': { bgcolor: theme.palette.primary.dark },
+            }}
+            aria-label="Edit Profile"
           >
             Edit Profile
           </Button>
+          
           {resume && (
             <>
               <Button
                 variant="contained"
+                disableElevation
+                startIcon={<EditOutlined />}
+                onClick={() => navigate('/resume/create')}
+                size="medium"
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontSize: '0.9rem',
+                  px: 2,
+                  py: 0.75,
+                  bgcolor: theme.palette.info.main,
+                  '&:hover': { bgcolor: theme.palette.info.dark },
+                }}
+                aria-label="Edit Resume"
+              >
+                Edit Resume
+              </Button>
+              <Button
+                variant="contained"
+                disableElevation
                 color="secondary"
                 startIcon={<DownloadOutlined />}
                 onClick={() => window.print()}
-                sx={{ borderRadius: 50, px: 4 }}
+                size="medium"
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontSize: '0.9rem',
+                  px: 2,
+                  py: 0.75,
+                }}
+                aria-label="Export Resume as PDF"
               >
                 Export PDF
               </Button>
               <Button
                 variant="outlined"
-                color="error"
-                sx={{ borderRadius: 50, px: 4, ml: 2 }}
-                onClick={() => { setConfirmType('resume'); setConfirmOpen(true); }}
+                startIcon={<DeleteOutlined />}
+                onClick={() => setConfirmOpen(true)}
+                size="medium"
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontSize: '0.9rem',
+                  px: 2,
+                  py: 0.75,
+                  borderColor: theme.palette.error.main,
+                  color: theme.palette.error.main,
+                  '&:hover': { 
+                    bgcolor: alpha(theme.palette.error.main, 0.05),
+                    borderColor: theme.palette.error.dark 
+                  },
+                }}
+                aria-label="Delete Resume"
               >
                 Delete Resume
               </Button>
             </>
           )}
-          <Button
-            variant="outlined"
-            color="error"
-            sx={{ borderRadius: 50, px: 4, ml: 2 }}
-            onClick={() => { setConfirmType('profile'); setConfirmOpen(true); }}
-          >
-            Delete Profile
-          </Button>
-        </Box>
+          
 
-        {resume ? (
-          <Box sx={{ mt: 4 }}>
-            <Button
-              variant="contained"
-              startIcon={<EditOutlined />}
-              onClick={() => navigate('/resume/create')}
-              sx={{ 
-                borderRadius: 2,
-                px: 4,
-                py: 1.5,
-                fontSize: '1rem'
-              }}
-            >
-              Edit Resume
-            </Button>
-          </Box>
-        ) : (
-          <Box sx={{ 
-            mt: 4,
-            textAlign: 'center',
-            border: `2px dashed ${theme.palette.divider}`,
-            borderRadius: 4,
-            p: 4
-          }}>
-            <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-              Ready to build your professional resume?
-            </Typography>
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<EditOutlined />}
-              onClick={() => navigate('/resume/create')}
-              sx={{
-                borderRadius: 2,
-                px: 6,
-                py: 1.5,
-                fontSize: '1.1rem',
-                boxShadow: theme.shadows[4]
-              }}
-            >
-              Create Your Resume
-            </Button>
-          </Box>
-        )}
-      </StyledPaper>
-    {/* Confirmation Dialog for Deletion */}
-    <ConfirmDialog
-      open={confirmOpen}
-      title={confirmType === 'resume' ? 'Delete Resume' : 'Delete Profile'}
-      description={confirmType === 'resume'
-        ? 'Are you sure you want to permanently delete your resume? This action cannot be undone.'
-        : 'Are you sure you want to permanently delete your profile? This action cannot be undone.'}
-      onConfirm={confirmType === 'resume' ? handleDeleteResume : handleDeleteProfile}
-      onCancel={() => setConfirmOpen(false)}
-      confirmText="Delete"
-      cancelText="Cancel"
-      loading={deleteLoading}
-    />
-    {/* Error Snackbar */}
-    <ErrorSnackbar
-      open={snackbarOpen}
-      message={snackbarMsg}
-      onClose={() => setSnackbarOpen(false)}
-    />
+        </Card>
+      </Box>
+
+      {/* Main Content */}
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={8}>
+          {/* Resume Section */}
+          {loading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8 }}>
+              <CircularProgress size={40} sx={{ mb: 2 }} />
+              <Typography>Loading profile...</Typography>
+            </Box>
+          ) : error ? (
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Typography color="error" variant="h6" gutterBottom>
+                {error}
+              </Typography>
+            </Box>
+          ) : resume ? (
+            <>
+              {/* Skills */}
+              {resume.skills?.length > 0 && (
+                <Card sx={{ mb: 4, p: 3, borderRadius: 5, boxShadow: 2 }}>
+                  <SectionHeader icon={<CodeOutlined />} title="Core Skills" />
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {parseField(resume.skills).map((skill, i) => (
+                      <Chip key={i} label={skill} color="primary" sx={{ mb: 1 }} />
+                    ))}
+                  </Box>
+                </Card>
+              )}
+              {/* Languages */}
+              {resume.languages?.length > 0 && (
+                <Card sx={{ mb: 4, p: 3, borderRadius: 5, boxShadow: 2 }}>
+                  <SectionHeader icon={<LanguageOutlined />} title="Languages" />
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {parseField(resume.languages).map((lang, i) => (
+                      <Chip key={i} label={lang} color="secondary" sx={{ mb: 1 }} />
+                    ))}
+                  </Box>
+                </Card>
+              )}
+              {/* Certifications */}
+              {resume.certifications?.length > 0 && (
+                <Card sx={{ mb: 4, p: 3, borderRadius: 5, boxShadow: 2 }}>
+                  <SectionHeader icon={<CardMembershipOutlined />} title="Certifications" />
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {parseField(resume.certifications).map((cert, i) => (
+                      <Chip key={i} label={cert} color="success" sx={{ mb: 1 }} />
+                    ))}
+                  </Box>
+                </Card>
+              )}
+              {/* Experience */}
+              {resume.experience?.length > 0 && (
+                <Card sx={{ mb: 4, p: 3, borderRadius: 5, boxShadow: 2 }}>
+                  <SectionHeader icon={<WorkOutline />} title="Professional Experience" />
+                  <Stack spacing={2} divider={<Divider flexItem />}>
+                    {parseField(resume.experience).map((exp, i) => (
+                      <Box key={i}>
+                        <Typography variant="subtitle1" fontWeight={600}>{exp.title} @ {exp.company}</Typography>
+                        <Typography variant="body2" color="text.secondary">{exp.start_date} - {exp.end_date || 'Present'}</Typography>
+                        <Typography variant="body2" sx={{ mt: 0.5 }}>{exp.description}</Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Card>
+              )}
+              {/* Education */}
+              {resume.education?.length > 0 && (
+                <Card sx={{ mb: 4, p: 3, borderRadius: 5, boxShadow: 2 }}>
+                  <SectionHeader icon={<SchoolOutlined />} title="Education" />
+                  <Stack spacing={2} divider={<Divider flexItem />}>
+                    {parseField(resume.education).map((edu, i) => (
+                      <Box key={i}>
+                        <Typography variant="subtitle1" fontWeight={600}>{edu.degree} @ {edu.school}</Typography>
+                        <Typography variant="body2" color="text.secondary">{edu.start_date} - {edu.end_date || 'Present'}</Typography>
+                        <Typography variant="body2" sx={{ mt: 0.5 }}>{edu.description}</Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Card>
+              )}
+            </>
+          ) : (
+            <Paper sx={{ p: 4, textAlign: 'center', border: `1px dashed ${theme.palette.divider}` }}>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                No resume created yet
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<EditOutlined />}
+                onClick={() => navigate('/resume/create')}
+                sx={{ borderRadius: 2 }}
+                aria-label="Create Resume"
+              >
+                Create Resume
+              </Button>
+            </Paper>
+          )}
+        </Grid>
+        {/* Profile Views & Notifications */}
+        <Grid item xs={12} md={4}>
+          {renderProfileViews()}
+        </Grid>
+      </Grid>
+      {/* ConfirmDialog and Snackbar are rendered at the end of the main container */}
+      <ConfirmDialog
+        open={confirmOpen}
+        title={'Delete Resume'}
+        description={'Are you sure you want to permanently delete your resume? This action cannot be undone.'}
+        onConfirm={handleDeleteResume}
+        onCancel={() => setConfirmOpen(false)}
+        confirmText="Delete"
+        cancelText="Cancel"
+        loading={deleteLoading}
+      />
+      <ErrorSnackbar
+        open={snackbarOpen}
+        message={snackbarMsg}
+        onClose={() => setSnackbarOpen(false)}
+      />
     </Container>
   );
 }

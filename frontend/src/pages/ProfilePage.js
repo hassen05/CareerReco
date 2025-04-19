@@ -44,7 +44,10 @@ function ProfilePage() {
             data.id,
             'profile_view',
             `${user.email} viewed your profile`,
-            { viewer_id: user.id }
+            {
+              viewer_id: user.id,
+              company_name: user.user_metadata?.company || 'Company'
+            }
           );
         }
       } catch (err) {

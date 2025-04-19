@@ -30,6 +30,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import NotFound from './pages/NotFound';
 import ServerError from './pages/ServerError';
+import SettingsPage from './pages/SettingsPage';
 
 function App() {
   const location = useLocation();
@@ -138,6 +139,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/500" element={<ServerError />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
