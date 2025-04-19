@@ -52,10 +52,21 @@ function CandidateSignup() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Password must be at least 8 characters, contain uppercase, lowercase, number, and special char
+  const isPasswordSecure = (pw) => {
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(pw);
+  };
+
   const handleSignUp = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (!isPasswordSecure(formData.password)) {
+      setError('Password must be at least 8 characters and include uppercase, lowercase, number, and special character.');
+      setLoading(false);
+      return;
+    }
 
     try {
       // Step 1: Sign up the user

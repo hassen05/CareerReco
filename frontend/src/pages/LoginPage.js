@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, Typography, TextField, Button, Box, Link } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import PageHero from '../components/PageHero';
 
@@ -13,13 +14,15 @@ function LoginPage() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
@@ -63,6 +66,7 @@ function LoginPage() {
             margin="normal"
             required
           />
+
           {error && <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>}
           <Button
             type="submit"
@@ -79,6 +83,11 @@ function LoginPage() {
             </Link>
           </Box>
         </form>
+        <Box sx={{ mt: 1, mb: 2, textAlign: 'right' }}>
+          <Link component={RouterLink} to="/forgot-password" underline="hover" color="primary">
+            Forgot Password?
+          </Link>
+        </Box>
       </Container>
     </Box>
   );

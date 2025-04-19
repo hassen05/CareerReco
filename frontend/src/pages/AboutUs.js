@@ -112,9 +112,10 @@ const AboutUs = () => {
               lineHeight: 1.8,
               fontSize: { xs: '1.1rem', md: '1.25rem' }
             }}>
-              We are the minds behind the Career Center Platform — an AI-powered recruitment solution designed
-              to reduce hiring bias, streamline CV ranking, and accelerate the hiring process. Through the CRYSPDM methodology,
-              our team has delivered a smart and efficient tool that transforms how recruiters find the right talent.
+              At CareerReco, we're revolutionizing talent acquisition through advanced AI technology. Our mission is to create a 
+              world where every candidate finds their ideal career path, and every employer discovers perfect-fit talent. 
+              By combining natural language processing with innovative LLM technology, we've built a recommendation system that 
+              understands the nuances of skills, experiences, and cultural fit beyond simple keyword matching.
             </Typography>
           </Box>
         </motion.div>

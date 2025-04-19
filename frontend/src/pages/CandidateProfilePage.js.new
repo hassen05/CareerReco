@@ -1,0 +1,622 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Container, Typography, Box, Avatar, Button, Paper, Grid, 
+  IconButton, Card, Stack, List, ListItem, ListItemAvatar,
+  ListItemText, Divider, Chip, CircularProgress, Tooltip
+} from '@mui/material';
+import { supabase } from '../supabaseClient';
+import { useNavigate } from 'react-router-dom';
+import { 
+  WorkOutline, SchoolOutlined, CodeOutlined, LanguageOutlined,
+  EditOutlined, DownloadOutlined, Email, 
+  Phone, LinkedIn, GitHub, Twitter, CardMembershipOutlined,
+  Business, Visibility, TrendingUp, EmojiEvents, LocationOn
+} from '@mui/icons-material';
+import { useTheme, styled, alpha } from '@mui/material/styles';
+
+// Styled components for enhanced UI
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(4),
+  marginBottom: theme.spacing(4),
+  border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  borderRadius: theme.shape.borderRadius * 3,
+  backgroundColor: alpha(theme.palette.background.paper, 0.98),
+  boxShadow: `0 10px 30px -10px ${alpha(theme.palette.primary.main, 0.12)}`,
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  position: 'relative',
+  overflow: 'hidden',
+  '&:before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '4px',
+    background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+  },
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: `0 20px 40px -20px ${alpha(theme.palette.primary.main, 0.25)}`,
+  },
+}));
+
+const SectionHeader = ({ icon, title }) => (
+  <Box sx={{ 
+    display: 'flex', 
+    alignItems: 'center', 
+    mb: 3,
+    pb: 1.5,
+    borderBottom: (theme) => `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    '& svg': {
+      color: 'primary.main',
+      mr: 2,
+      fontSize: 24
+    }
+  }}>
+    <Box sx={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.1),
+      borderRadius: '12px',
+      width: 44,
+      height: 44,
+      mr: 2
+    }}>
+      {icon}
+    </Box>
+    <Typography 
+      variant="h6" 
+      fontWeight={700} 
+      color="text.primary"
+    >
+      {title}
+    </Typography>
+  </Box>
+);
+
+const DetailChip = styled(Box)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  color: theme.palette.primary.main,
+  padding: theme.spacing(0.8, 1.8),
+  borderRadius: theme.shape.borderRadius * 2,
+  fontSize: '0.9rem',
+  fontWeight: 500,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
+  margin: theme.spacing(0.5),
+  boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.08)}`,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.12),
+    transform: 'translateY(-2px)',
+    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.12)}`,
+  }
+}));
+
+const ProfileSection = styled(Box)(({ theme }) => ({
+  marginBottom: theme.spacing(4),
+  padding: theme.spacing(3),
+  borderRadius: theme.shape.borderRadius * 2,
+  backgroundColor: alpha(theme.palette.background.default, 0.5),
+  boxShadow: `inset 0 1px 8px ${alpha(theme.palette.common.black, 0.03)}`,
+  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+  '&:hover': {
+    boxShadow: `inset 0 1px 12px ${alpha(theme.palette.common.black, 0.05)}`,
+  }
+}));
+
+const AIScoreIndicator = styled(Box)(({ theme, score }) => {
+  // Calculate colors based on score (0-100)
+  const getColor = (score) => {
+    if (score >= 80) return theme.palette.success.main;
+    if (score >= 60) return theme.palette.info.main;
+    if (score >= 40) return theme.palette.warning.main;
+    return theme.palette.error.main;
+  };
+  
+  return {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 80,
+    height: 80,
+    borderRadius: '50%',
+    backgroundColor: alpha(getColor(score), 0.1),
+    boxShadow: `0 4px 20px ${alpha(getColor(score), 0.25)}`,
+    '&:before': {
+      content: '""',
+      position: 'absolute',
+      inset: '4px',
+      borderRadius: '50%',
+      background: `conic-gradient(
+        ${getColor(score)} ${score}%, 
+        ${alpha(getColor(score), 0.2)} 0
+      )`,
+      mask: 'radial-gradient(farthest-side, transparent 40%, white 41%)',
+      WebkitMask: 'radial-gradient(farthest-side, transparent 40%, white 41%)',
+    }
+  };
+});
+
+function CandidateProfilePage() {
+  const [profile, setProfile] = useState(null);
+  const [resume, setResume] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [profileViews, setProfileViews] = useState([]);
+  const [loadingViews, setLoadingViews] = useState(true);
+  const [aiMatchScore, setAiMatchScore] = useState(85); // Example AI match score
+  const navigate = useNavigate();
+  const theme = useTheme();
+
+  useEffect(() => {
+    fetchData();
+    fetchProfileViews();
+  }, []);
+
+  // Fetch user profile data
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not found');
+
+      // Fetch profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+      setProfile(profileData);
+
+      // Fetch resume if exists
+      const { data: resumeData, error: resumeError } = await supabase
+        .from('resumes')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (resumeError) throw resumeError;
+      setResume(resumeData);
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+      setError(error.message);
+      setLoading(false);
+    }
+  };
+
+  // Fetch profile view analytics
+  const fetchProfileViews = async () => {
+    try {
+      setLoadingViews(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('profile_views')
+        .select('*, viewers:profiles(*)')
+        .eq('profile_id', user.id)
+        .order('viewed_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setProfileViews(data || []);
+      setLoadingViews(false);
+    } catch (error) {
+      console.error('Error fetching profile views:', error);
+      setLoadingViews(false);
+    }
+  };
+
+  // Helper to parse JSON fields if stored as strings
+  const parseField = (field) => {
+    if (!field) return [];
+    if (typeof field === 'string') {
+      try {
+        return JSON.parse(field);
+      } catch (e) {
+        return [];
+      }
+    }
+    return Array.isArray(field) ? field : [];
+  };
+
+  // Render section with detail items
+  const renderDetailSection = (items, icon, title) => {
+    const parsedItems = parseField(items);
+    if (!parsedItems.length) return null;
+
+    return (
+      <ProfileSection>
+        <SectionHeader icon={icon} title={title} />
+        <Grid container spacing={1}>
+          {parsedItems.map((item, index) => (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <DetailChip>
+                {item}
+              </DetailChip>
+            </Grid>
+          ))}
+        </Grid>
+      </ProfileSection>
+    );
+  };
+
+  // Render experience or education entries
+  const renderExperienceEducation = (items, icon, title) => {
+    const parsedItems = parseField(items);
+    if (!parsedItems.length) return null;
+
+    return (
+      <ProfileSection>
+        <SectionHeader icon={icon} title={title} />
+        <List>
+          {parsedItems.map((item, index) => (
+            <React.Fragment key={index}>
+              <ListItem alignItems="flex-start" sx={{ px: 1, py: 2 }}>
+                <ListItemAvatar>
+                  <Avatar sx={{ bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1) }}>
+                    <Business color="primary" />
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {item.title || item.degree}
+                    </Typography>
+                  }
+                  secondary={
+                    <>
+                      <Typography variant="body2" color="text.primary">
+                        {item.company || item.institution}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {item.period}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        {item.description}
+                      </Typography>
+                    </>
+                  }
+                />
+              </ListItem>
+              {index < parsedItems.length - 1 && <Divider variant="inset" component="li" />}
+            </React.Fragment>
+          ))}
+        </List>
+      </ProfileSection>
+    );
+  };
+
+  // Render profile views section with AI-enhanced visualization
+  const renderProfileViews = () => {
+    if (!profileViews.length) return null;
+    
+    return (
+      <ProfileSection>
+        <SectionHeader icon={<Visibility />} title="Profile Activity" />
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <Card sx={{ 
+              p: 3, 
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Typography variant="h6" gutterBottom>AI Match Score</Typography>
+              <Box sx={{ position: 'relative', my: 2 }}>
+                <AIScoreIndicator score={aiMatchScore} />
+                <Typography 
+                  variant="h4" 
+                  fontWeight={700}
+                  sx={{ 
+                    position: 'absolute', 
+                    top: '50%', 
+                    left: '50%', 
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                >
+                  {aiMatchScore}
+                </Typography>
+              </Box>
+              <Tooltip title="Based on resume matching with job market requirements">
+                <Typography variant="body2" color="text.secondary" align="center">
+                  Your profile matches {aiMatchScore}% of top job requirements in your field
+                </Typography>
+              </Tooltip>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={8}>
+            <Card sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom>Recent Profile Views</Typography>
+              <List>
+                {profileViews.slice(0, 4).map((view, index) => (
+                  <React.Fragment key={index}>
+                    <ListItem alignItems="flex-start" sx={{ px: 1 }}>
+                      <ListItemAvatar>
+                        <Avatar src={view.viewers?.avatar_url}>
+                          {view.viewers?.full_name?.charAt(0) || "U"}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={view.viewers?.full_name || "Anonymous Recruiter"}
+                        secondary={
+                          <Typography variant="body2" color="text.secondary">
+                            {view.viewers?.company || "Company"} • Viewed on {new Date(view.viewed_at).toLocaleDateString()}
+                          </Typography>
+                        }
+                      />
+                      <Chip 
+                        size="small" 
+                        label={view.match_score ? `${view.match_score}% Match` : "Viewed"} 
+                        color={view.match_score > 80 ? "success" : "default"}
+                        sx={{ ml: 2 }}
+                      />
+                    </ListItem>
+                    {index < profileViews.slice(0, 4).length - 1 && <Divider variant="inset" component="li" />}
+                  </React.Fragment>
+                ))}
+              </List>
+            </Card>
+          </Grid>
+        </Grid>
+      </ProfileSection>
+    );
+  };
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 8 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 10 }}>
+          <CircularProgress size={60} thickness={4} />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 8 }}>
+        <Typography variant="h5" color="error" align="center">
+          Error: {error}
+        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={() => navigate('/')}
+          >
+            Return to Dashboard
+          </Button>
+        </Box>
+      </Container>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 8 }}>
+        <Typography variant="h5" align="center">
+          Profile not found. Please complete your profile.
+        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={() => navigate('/profile/edit')}
+          >
+            Create Profile
+          </Button>
+        </Box>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 6 }}>
+      <StyledPaper>
+        {/* Header/Bio Section */}
+        <Box sx={{ textAlign: 'center', mb: 6 }}>
+          <Avatar
+            src={profile.avatar_url}
+            alt={profile.full_name}
+            sx={{
+              width: 150,
+              height: 150,
+              mx: 'auto',
+              mb: 2,
+              border: theme => `4px solid ${theme.palette.background.paper}`,
+              boxShadow: theme => `0 8px 20px ${alpha(theme.palette.primary.main, 0.25)}`
+            }}
+          />
+          <Typography variant="h4" fontWeight={700} gutterBottom>
+            {profile.full_name}
+          </Typography>
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            {profile.headline || "Professional Bio"}
+          </Typography>
+
+          {profile.location && (
+            <Chip 
+              icon={<LocationOn />} 
+              label={profile.location} 
+              sx={{ mt: 1, mb: 3 }}
+            />
+          )}
+          
+          {profile.bio && (
+            <Typography variant="body1" color="text.secondary" sx={{ 
+              maxWidth: '700px',
+              mx: 'auto',
+              mb: 3,
+              lineHeight: 1.8,
+              fontSize: '1.05rem',
+              fontWeight: 400
+            }}>
+              {profile.bio}
+            </Typography>
+          )}
+
+          <Stack direction="row" spacing={2} justifyContent="center">
+            {profile.email && (
+              <DetailChip sx={{ px: 2, py: 1 }}>
+                <Email sx={{ color: 'primary.main', mr: 1 }} />
+                {profile.email}
+              </DetailChip>
+            )}
+            {profile.phone && (
+              <DetailChip sx={{ px: 2, py: 1 }}>
+                <Phone sx={{ color: 'primary.main', mr: 1 }} />
+                {profile.phone}
+              </DetailChip>
+            )}
+          </Stack>
+
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
+            {profile.linkedin && (
+              <IconButton 
+                component="a" 
+                href={profile.linkedin} 
+                target="_blank" 
+                rel="noopener"
+                color="primary"
+              >
+                <LinkedIn />
+              </IconButton>
+            )}
+            {profile.github && (
+              <IconButton 
+                component="a" 
+                href={profile.github} 
+                target="_blank" 
+                rel="noopener"
+                color="primary"
+              >
+                <GitHub />
+              </IconButton>
+            )}
+            {profile.twitter && (
+              <IconButton 
+                component="a" 
+                href={profile.twitter} 
+                target="_blank" 
+                rel="noopener"
+                color="primary"
+              >
+                <Twitter />
+              </IconButton>
+            )}
+          </Box>
+        </Box>
+
+        {/* Profile Views & AI Metrics */}
+        {renderProfileViews()}
+
+        {/* Experience Section */}
+        {renderExperienceEducation(profile.experience, <WorkOutline />, "Professional Experience")}
+
+        {/* Education Section */}
+        {renderExperienceEducation(profile.education, <SchoolOutlined />, "Education")}
+
+        {/* Skills Section */}
+        {renderDetailSection(profile.skills, <CodeOutlined />, "Skills & Expertise")}
+
+        {/* Languages Section */}
+        {renderDetailSection(profile.languages, <LanguageOutlined />, "Languages")}
+
+        {/* Certifications Section */}
+        {renderDetailSection(profile.certifications, <CardMembershipOutlined />, "Certifications")}
+
+        {/* Awards Section */}
+        {renderDetailSection(profile.awards, <EmojiEvents />, "Awards & Achievements")}
+
+        {/* Action Buttons */}
+        <Box sx={{ 
+          mt: 6, 
+          pt: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+        }}>
+          <Button
+            variant="contained"
+            startIcon={<EditOutlined />}
+            onClick={() => navigate('/profile/edit')}
+            sx={{ borderRadius: 50, px: 4 }}
+          >
+            Edit Profile
+          </Button>
+          {resume && (
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<DownloadOutlined />}
+              onClick={() => window.open(resume.pdf_url, '_blank')}
+              sx={{ borderRadius: 50, px: 4 }}
+            >
+              Download Resume
+            </Button>
+          )}
+        </Box>
+
+        {resume ? (
+          <Box sx={{ mt: 4 }}>
+            <Button
+              variant="contained"
+              color="info"
+              startIcon={<EditOutlined />}
+              onClick={() => navigate('/resume/edit')}
+              sx={{ 
+                borderRadius: 2,
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem'
+              }}
+            >
+              Edit Resume
+            </Button>
+          </Box>
+        ) : (
+          <Box sx={{ 
+            mt: 4,
+            textAlign: 'center',
+            border: `2px dashed ${theme.palette.divider}`,
+            borderRadius: 4,
+            p: 4
+          }}>
+            <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+              Ready to build your professional resume?
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<EditOutlined />}
+              onClick={() => navigate('/resume/create')}
+              sx={{
+                borderRadius: 2,
+                px: 6,
+                py: 1.5,
+                fontSize: '1.1rem',
+                boxShadow: theme.shadows[4]
+              }}
+            >
+              Create Your Resume
+            </Button>
+          </Box>
+        )}
+      </StyledPaper>
+    </Container>
+  );
+}
+
+export default CandidateProfilePage;

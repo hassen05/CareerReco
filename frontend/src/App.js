@@ -25,6 +25,9 @@ import InterviewTrainer from './pages/InterviewTrainer';
 import { supabase } from './supabaseClient';
 import { AuthProvider } from './contexts/AuthContext';
 import AdminDashboard from './pages/AdminDashboard';
+import LogoPreviewPage from './pages/LogoPreviewPage';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   const location = useLocation();
@@ -47,6 +50,10 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/logo-preview" element={<LogoPreviewPage />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/reset-password/*" element={<ResetPassword />} />
           
           {/* The /recommend route is available for recruiters and admin */}
           <Route 
