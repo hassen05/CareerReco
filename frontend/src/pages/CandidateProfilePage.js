@@ -5,8 +5,8 @@ import {
   ListItemText, Divider, Chip, CircularProgress
 } from '@mui/material';
 import { supabase } from '../supabaseClient';
-
-
+import ConfirmDialog from '../components/ConfirmDialog';
+import ErrorSnackbar from '../components/ErrorSnackbar';
 
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -71,11 +71,75 @@ function CandidateProfilePage() {
   const navigate = useNavigate();
   const theme = useTheme();
 
+  // Dialog & error state for destructive actions
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMsg, setSnackbarMsg] = useState('');
+  const [confirmType, setConfirmType] = useState('profile'); // 'profile' or 'resume'
+
+  // Delete profile handler
+  const handleDeleteProfile = async () => {
+    setDeleteLoading(true);
+    try {
+      // Remove user profile from supabase
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error('Not authenticated');
+      const { error: deleteError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+      if (deleteError) throw deleteError;
+      // Optionally, sign out user and redirect
+      await supabase.auth.signOut();
+      navigate('/');
+    } catch (err) {
+      setSnackbarMsg(err.message || 'Failed to delete profile');
+      setSnackbarOpen(true);
+    } finally {
+      setDeleteLoading(false);
+      setConfirmOpen(false);
+    }
+  };
+
+  // Delete resume handler
+  const handleDeleteResume = async () => {
+    setDeleteLoading(true);
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error('Not authenticated');
+      const { error: deleteError } = await supabase
+        .from('resumes')
+        .delete()
+        .eq('user_id', user.id);
+      if (deleteError) throw deleteError;
+      setResume(null);
+      setSnackbarMsg('Resume deleted successfully.');
+      setSnackbarOpen(true);
+    } catch (err) {
+      setSnackbarMsg(err.message || 'Failed to delete resume');
+      setSnackbarOpen(true);
+    } finally {
+      setDeleteLoading(false);
+      setConfirmOpen(false);
+    }
+  };
+
+
   useEffect(() => {
+    let globalTimeoutId;
     const fetchData = async () => {
       try {
-        setLoading(true); // Ensure loading is set to true
+        setLoading(true);
+        setError(null);
         console.log('Starting profile data fetch');
+
+        // Global loading timeout (8 seconds)
+        globalTimeoutId = setTimeout(() => {
+          setLoading(false);
+          setError('Request timed out. Please check your connection and try again.');
+          console.error('Global loading timeout hit!');
+        }, 8000);
         
         // Fetch user authentication data with timeout
         const userPromise = supabase.auth.getUser();
@@ -170,10 +234,15 @@ function CandidateProfilePage() {
         setError(error.message || 'Failed to load profile');
       } finally {
         setLoading(false);
+        if (globalTimeoutId) clearTimeout(globalTimeoutId);
       }
     };
 
     fetchData();
+    // Cleanup
+    return () => {
+      if (globalTimeoutId) clearTimeout(globalTimeoutId);
+    };
   }, []);
 
   useEffect(() => {
@@ -609,16 +678,34 @@ function CandidateProfilePage() {
             Edit Profile
           </Button>
           {resume && (
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<DownloadOutlined />}
-              onClick={() => window.print()}
-              sx={{ borderRadius: 50, px: 4 }}
-            >
-              Export PDF
-            </Button>
+            <>
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<DownloadOutlined />}
+                onClick={() => window.print()}
+                sx={{ borderRadius: 50, px: 4 }}
+              >
+                Export PDF
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                sx={{ borderRadius: 50, px: 4, ml: 2 }}
+                onClick={() => { setConfirmType('resume'); setConfirmOpen(true); }}
+              >
+                Delete Resume
+              </Button>
+            </>
           )}
+          <Button
+            variant="outlined"
+            color="error"
+            sx={{ borderRadius: 50, px: 4, ml: 2 }}
+            onClick={() => { setConfirmType('profile'); setConfirmOpen(true); }}
+          >
+            Delete Profile
+          </Button>
         </Box>
 
         {resume ? (
@@ -666,6 +753,25 @@ function CandidateProfilePage() {
           </Box>
         )}
       </StyledPaper>
+    {/* Confirmation Dialog for Deletion */}
+    <ConfirmDialog
+      open={confirmOpen}
+      title={confirmType === 'resume' ? 'Delete Resume' : 'Delete Profile'}
+      description={confirmType === 'resume'
+        ? 'Are you sure you want to permanently delete your resume? This action cannot be undone.'
+        : 'Are you sure you want to permanently delete your profile? This action cannot be undone.'}
+      onConfirm={confirmType === 'resume' ? handleDeleteResume : handleDeleteProfile}
+      onCancel={() => setConfirmOpen(false)}
+      confirmText="Delete"
+      cancelText="Cancel"
+      loading={deleteLoading}
+    />
+    {/* Error Snackbar */}
+    <ErrorSnackbar
+      open={snackbarOpen}
+      message={snackbarMsg}
+      onClose={() => setSnackbarOpen(false)}
+    />
     </Container>
   );
 }

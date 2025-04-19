@@ -28,6 +28,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import LogoPreviewPage from './pages/LogoPreviewPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import NotFound from './pages/NotFound';
+import ServerError from './pages/ServerError';
 
 function App() {
   const location = useLocation();
@@ -136,6 +138,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/500" element={<ServerError />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
         <Footer />
       </ThemeProvider>
