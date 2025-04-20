@@ -60,12 +60,16 @@ function CandidateProfilePage() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState('');
 
+  // Track if we've already logged the user info
+  const loggedUserRef = React.useRef(false);
+
   // Debug user object - only log once on mount
   useEffect(() => {
-    if (user) {
+    if (user?.id && !loggedUserRef.current) {
       console.log('[CandidateProfilePage] User loaded:', user.id);
+      loggedUserRef.current = true;
     }
-  }, [user]); // Added user dependency
+  }, [user?.id]); // Only depend on user ID
 
   // Delete resume handler
   const handleDeleteResume = async () => {
@@ -603,6 +607,25 @@ function CandidateProfilePage() {
                       size="small"
                     >
                       <GitHub fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {profile.website && (
+                  <Tooltip title="Website">
+                    <IconButton 
+                      aria-label="website" 
+                      component="a" 
+                      href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      color="primary"
+                      sx={{ 
+                        bgcolor: alpha(theme.palette.primary.main, 0.08), 
+                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
+                      }}
+                      size="small"
+                    >
+                      <LanguageOutlined fontSize="small" />
                     </IconButton>
                   </Tooltip>
                 )}

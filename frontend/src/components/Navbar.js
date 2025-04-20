@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   AppBar,
   Box,
@@ -49,30 +49,49 @@ const Navbar = () => {
     { label: "About", path: "/about" },
   ];
 
-  // Recruiter (and admin) specific links.
-  const recruiterLinks = (userRole === 'recruiter' || userRole === 'admin') ? [
-    { label: "Find Candidates", path: "/recommend" }
-  ] : [];
+  // Memoize navigation links to prevent re-renders
+  const allLinks = useMemo(() => {
+    // Compute role-specific links - These will be empty if not authenticated
+    // or if the role doesn't match
+    const isAuthenticated = !!user;
+  
+    // Basic links visible to all users
+    const basicLinks = [...navLinks];
 
-  // Candidate specific links
-  const candidateLinks = (userRole === 'candidate') ? [
-    { label: "Interview Trainer", path: "/interview-trainer" },
-    { label: "Jobs", path: "/jobs" }
-  ] : [];
-
-  // Combine navigation links.
-  const allLinks = [...navLinks, ...recruiterLinks, ...candidateLinks];
+    // Only add role-specific links for authenticated users
+    if (isAuthenticated) {
+      // Recruiter and admin links
+      if (userRole === 'recruiter' || userRole === 'admin') {
+        basicLinks.push({ label: "Find Candidates", path: "/recommend" });
+      }
+  
+      // Candidate specific links
+      if (userRole === 'candidate') {
+        basicLinks.push({ label: "Interview Trainer", path: "/interview-trainer" });
+      }
+      
+      // Admin-only links
+      if (userRole === 'admin') {
+        basicLinks.push({ label: "Admin Dashboard", path: "/admin-dashboard" });
+      }
+    }
+  
+    return basicLinks;
+  }, [navLinks, user, userRole]); // Only recalculate when these dependencies change
 
   // Use a ref to prevent multiple fetches for the same user
-  const fetchedRef = React.useRef(false);
+  const fetchedUserIdRef = React.useRef(null);
 
   useEffect(() => {
-    // Skip if no auth user or if we already fetched for this user
-    if (!authUser || fetchedRef.current) return;
+    // Skip if no auth user
+    if (!authUser) return;
+    
+    // Skip if we've already fetched for this specific user ID
+    if (fetchedUserIdRef.current === authUser.id) return;
 
     console.log('[Navbar] Auth user detected:', authUser?.id);
     setUser(authUser);
-    fetchedRef.current = true;
+    fetchedUserIdRef.current = authUser.id;
 
     // Fetch user role only once per session
     const fetchUserRole = async () => {
@@ -120,7 +139,7 @@ const Navbar = () => {
     if (!authUser) {
       setUser(null);
       setUserRole(null);
-      fetchedRef.current = false;
+      fetchedUserIdRef.current = null;
     }
   }, [authUser]);
 
@@ -217,29 +236,6 @@ const Navbar = () => {
           {link.label}
         </MenuItem>
       ))}
-
-      {/* Interview Trainer already included in candidateLinks */}
-
-      {/* Admin dashboard for admin role. */}
-      {userRole === 'admin' && (
-        <MenuItem
-          component={Link}
-          to="/admin-dashboard"
-          onClick={handleMobileMenuClose}
-          sx={{
-            color: location.pathname === '/admin-dashboard' ? 'primary.main' : 'text.primary',
-            fontWeight: location.pathname === '/admin-dashboard' ? 600 : 500,
-            py: 1.2,
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              backgroundColor: alpha('#553d8e', 0.04),
-              transform: 'translateX(5px)'
-            }
-          }}
-        >
-          Admin dashboard
-        </MenuItem>
-      )}
 
       <Divider sx={{ my: 1.5 }} />
 
@@ -492,78 +488,6 @@ const Navbar = () => {
                   </Button>
                 </motion.div>
               ))}
-
-              {/* Interview Trainer button: visible for candidates and admins */}
-              {(userRole === 'candidate' || userRole === 'admin') && (
-                <motion.div whileHover={{ scale: 1.03 }}>
-                  <Button
-                    component={Link}
-                    to="/interview-trainer"
-                    sx={{
-                      color: location.pathname === '/interview-trainer' ? 'primary.main' : 'text.secondary',
-                      fontWeight: location.pathname === '/interview-trainer' ? 600 : 500,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      position: 'relative',
-                      '&:hover': {
-                        backgroundColor: 'transparent',
-                        color: 'primary.main',
-                      },
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: -2,
-                        left: 0,
-                        width: location.pathname === '/interview-trainer' ? '100%' : '0',
-                        height: '2px',
-                        backgroundColor: 'primary.main',
-                        transition: 'width 0.3s ease'
-                      },
-                      '&:hover::after': {
-                        width: '100%'
-                      }
-                    }}
-                  >
-                    Interview Trainer
-                  </Button>
-                </motion.div>
-              )}
-
-              {/* Admin dashboard button: for admin role */}
-              {userRole === 'admin' && (
-                <motion.div whileHover={{ scale: 1.03 }}>
-                  <Button
-                    component={Link}
-                    to="/admin-dashboard"
-                    sx={{
-                      color: location.pathname === '/admin-dashboard' ? 'primary.main' : 'text.secondary',
-                      fontWeight: location.pathname === '/admin-dashboard' ? 600 : 500,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      position: 'relative',
-                      '&:hover': {
-                        backgroundColor: 'transparent',
-                        color: 'primary.main',
-                      },
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: -2,
-                        left: 0,
-                        width: location.pathname === '/admin-dashboard' ? '100%' : '0',
-                        height: '2px',
-                        backgroundColor: 'primary.main',
-                        transition: 'width 0.3s ease'
-                      },
-                      '&:hover::after': {
-                        width: '100%'
-                      }
-                    }}
-                  >
-                    Admin dashboard
-                  </Button>
-                </motion.div>
-              )}
             </Box>
 
             <Box sx={{ flexGrow: 1 }} />
