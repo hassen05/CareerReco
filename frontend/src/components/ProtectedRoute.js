@@ -17,16 +17,26 @@ function ProtectedRoute({ children, requiredRole }) {
         navigate('/login');
       } else {
         // Query the profiles table for the user's role using the user ID.
-        const { data: profile, error } = await supabase
+        let { data: profile, error } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', user.id)
           .single();
         
-        if (error) {
-          console.error('Error fetching user role from profiles:', error);
-          // In case of error, you can optionally set a default role.
-          setUserRole('candidate');
+        if (error || !profile) {
+          console.warn('[ProtectedRoute] No profile found in profiles. Trying recruiter_profiles...');
+          let { data: recruiterProfile, error: recruiterError } = await supabase
+            .from('recruiter_profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          if (recruiterError || !recruiterProfile) {
+            console.error('Error fetching user role from recruiter_profiles:', recruiterError);
+            setUserRole('candidate');
+          } else {
+            console.log('[ProtectedRoute] Fetched recruiter_profile.role:', recruiterProfile.role);
+            setUserRole(recruiterProfile.role);
+          }
         } else {
           setUserRole(profile.role);
         }

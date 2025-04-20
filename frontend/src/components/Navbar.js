@@ -35,6 +35,8 @@ function HideOnScroll(props) {
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  // Use the Auth context
+  const { user: authUser } = useAuth();
 
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
@@ -52,65 +54,82 @@ const Navbar = () => {
     { label: "Find Candidates", path: "/recommend" }
   ] : [];
 
+  // Candidate specific links
+  const candidateLinks = (userRole === 'candidate') ? [
+    { label: "Interview Trainer", path: "/interview-trainer" },
+    { label: "Jobs", path: "/jobs" }
+  ] : [];
+
   // Combine navigation links.
-  const allLinks = [...navLinks, ...recruiterLinks];
+  const allLinks = [...navLinks, ...recruiterLinks, ...candidateLinks];
+
+  // Use a ref to prevent multiple fetches for the same user
+  const fetchedRef = React.useRef(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      // Get the currently authenticated user.
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUser(user);
-        // Fetch the user's role from the "profiles" table.
+    // Skip if no auth user or if we already fetched for this user
+    if (!authUser || fetchedRef.current) return;
+
+    console.log('[Navbar] Auth user detected:', authUser?.id);
+    setUser(authUser);
+    fetchedRef.current = true;
+
+    // Fetch user role only once per session
+    const fetchUserRole = async () => {
+      try {
+        // Try candidate profile first
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('role')
-          .eq('id', user.id)
-          .single();
-        if (error) {
-          console.error("Error fetching profile:", error);
-          setUserRole(null);
-        } else {
-          setUserRole(profile.role); // Example values: "admin", "candidate", "recruiter"
-        }
-      } else {
-        setUser(null);
-        setUserRole(null);
-      }
-    };
+          .eq('id', authUser.id)
+          .maybeSingle();
 
-    fetchUserData();
-
-    // Listen for auth state changes and update user and role accordingly.
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        if (error) {
-          console.error("Error fetching profile on auth change:", error);
-          setUserRole(null);
-        } else {
+        if (profile) {
+          console.log('[Navbar] Found candidate role:', profile.role);
           setUserRole(profile.role);
+          return;
         }
-      } else {
-        setUser(null);
+
+        // If no candidate profile, try recruiter profile
+        const { data: recruiterProfile, error: recruiterError } = await supabase
+          .from('recruiter_profiles')
+          .select('role')
+          .eq('id', authUser.id)
+          .maybeSingle();
+
+        if (recruiterProfile) {
+          console.log('[Navbar] Found recruiter role:', recruiterProfile.role);
+          setUserRole(recruiterProfile.role);
+          return;
+        }
+
+        // No profile found
+        console.warn('[Navbar] No profile found for user:', authUser.id);
+        setUserRole(null);
+      } catch (error) {
+        console.error('[Navbar] Error fetching user role:', error);
         setUserRole(null);
       }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
     };
-  }, []);
+
+    fetchUserRole();
+  }, [authUser]);
+
+  // Reset when auth user is null
+  useEffect(() => {
+    if (!authUser) {
+      setUser(null);
+      setUserRole(null);
+      fetchedRef.current = false;
+    }
+  }, [authUser]);
+
 
   // Handle logout.
+  const { signOut } = useAuth();
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut();
       navigate('/');
       setProfileMenuAnchor(null);
     } catch (error) {
@@ -199,26 +218,7 @@ const Navbar = () => {
         </MenuItem>
       ))}
 
-      {/* Interview Trainer: now available for candidates and admins */}
-      {(userRole === 'candidate' || userRole === 'admin') && (
-        <MenuItem
-          component={Link}
-          to="/interview-trainer"
-          onClick={handleMobileMenuClose}
-          sx={{
-            color: location.pathname === '/interview-trainer' ? 'primary.main' : 'text.primary',
-            fontWeight: location.pathname === '/interview-trainer' ? 600 : 500,
-            py: 1.2,
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              backgroundColor: alpha('#553d8e', 0.04),
-              transform: 'translateX(5px)'
-            }
-          }}
-        >
-          Interview Trainer
-        </MenuItem>
-      )}
+      {/* Interview Trainer already included in candidateLinks */}
 
       {/* Admin dashboard for admin role. */}
       {userRole === 'admin' && (

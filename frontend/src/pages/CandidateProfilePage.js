@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Container, Typography, Box, Avatar, Button, Paper, Grid, 
   IconButton, Card, Stack, List, ListItem, ListItemAvatar,
@@ -9,14 +9,14 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import ErrorSnackbar from '../components/ErrorSnackbar';
 
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   WorkOutline, CodeOutlined, LanguageOutlined,
   EditOutlined, DownloadOutlined, EmailOutlined,
   PhoneOutlined, LinkedIn, GitHub, CardMembershipOutlined,
   Business, Visibility, DeleteOutlined, SchoolOutlined
 } from '@mui/icons-material';
-import { useTheme, styled, alpha } from '@mui/material/styles';
-
+import { useTheme, alpha } from '@mui/material/styles';
 
 const SectionHeader = ({ icon, title }) => (
   <Box sx={{ 
@@ -36,35 +36,54 @@ const SectionHeader = ({ icon, title }) => (
   </Box>
 );
 
-
 function CandidateProfilePage() {
+  const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState(null);
   const [resume, setResume] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [profileViews, setProfileViews] = useState([]);
   const [loadingViews, setLoadingViews] = useState(true);
+  
+  // Store stable references to avoid unnecessary re-renders
+  const profileRef = React.useRef(null);
+  const resumeRef = React.useRef(null);
+  const dataFetchedRef = React.useRef(false);
+  const viewsFetchedRef = React.useRef(false);
+  
   const navigate = useNavigate();
   const theme = useTheme();
-
+  
   // Dialog & error state for destructive actions
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState('');
 
+  // Debug user object - only log once on mount
+  useEffect(() => {
+    if (user) {
+      console.log('[CandidateProfilePage] User loaded:', user.id);
+    }
+  }, [user]); // Added user dependency
+
   // Delete resume handler
   const handleDeleteResume = async () => {
+    if (deleteLoading) return; // Prevent double-clicks
+    
     setDeleteLoading(true);
     try {
-      const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('Not authenticated');
+      
       const { error: deleteError } = await supabase
         .from('resumes')
         .delete()
         .eq('user_id', user.id);
+        
       if (deleteError) throw deleteError;
+      
       setResume(null);
+      resumeRef.current = null;
       setSnackbarMsg('Resume deleted successfully.');
       setSnackbarOpen(true);
     } catch (err) {
@@ -76,177 +95,127 @@ function CandidateProfilePage() {
     }
   };
 
-
-  useEffect(() => {
-    let globalTimeoutId;
-    const fetchData = async () => {
+  // Primary data fetching function with proper memoization
+  const fetchData = useCallback(async () => {
+    // Prevent redundant fetches when data is already loaded
+    if (dataFetchedRef.current || !user?.id || authLoading) return;
+    
+    setLoading(true);
+    setError(null);
+    console.log('Starting profile data fetch');
+    
+    try {
+      const userId = user.id;
+      const userEmail = user.email;
+      const firstName = user.user_metadata?.first_name;
+      const lastName = user.user_metadata?.last_name;
+      
+      console.log('[CandidateProfilePage] fetchData for:', {userId, userEmail, firstName, lastName});
+      
+      // Fetch profile with a single clean query
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (profileError) {
+        console.error('[CandidateProfilePage] Profile fetch error:', profileError);
+        throw new Error('Unable to load profile. Please try again later.');
+      }
+      
+      console.log('[CandidateProfilePage] Profile data fetched:', profileData ? 'success' : 'empty');
+      
+      // Fetch resume data
+      let resumeData = null;
       try {
-        setLoading(true);
-        setError(null);
-        console.log('Starting profile data fetch');
-
-        // Global loading timeout (8 seconds)
-        globalTimeoutId = setTimeout(() => {
-          setLoading(false);
-          setError('Request timed out. Please check your connection and try again.');
-          console.error('Global loading timeout hit!');
-        }, 8000);
-        
-        // Fetch user authentication data with timeout
-        const userPromise = supabase.auth.getUser();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Authentication timeout')), 3000)
-        );
-        
-        let user;
-        try {
-          const { data } = await Promise.race([userPromise, timeoutPromise]);
-          user = data?.user;
-          console.log('Auth check completed, user:', user ? 'found' : 'not found');
-        } catch (authError) {
-          console.error('Auth error:', authError);
-          throw new Error('Authentication failed. Please try logging in again.');
-        }
-        
-        if (!user) {
-          console.log('No authenticated user found');
-          throw new Error('Please sign in to view your profile');
-        }
-
-        // Fetch profile with timeout
-        console.log('Fetching profile for user ID:', user.id);
-        const profilePromise = supabase
-          .from('profiles')
+        const { data, error } = await supabase
+          .from('resumes')
           .select('*')
-          .eq('id', user.id)
+          .eq('user_id', userId)
           .maybeSingle();
           
-        const profileTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
-        );
-        
-        let profileData;
-        try {
-          const { data, error } = await Promise.race([profilePromise, profileTimeoutPromise]);
-          if (error) throw error;
-          profileData = data;
-          console.log('Profile data fetched:', profileData ? 'success' : 'empty');
-        } catch (profileError) {
-          console.error('Profile fetch error:', profileError);
-          throw new Error('Unable to load profile. Please try again later.');
-        }
-
-        // Fetch resume data
-        console.log('Fetching resume data');
-        let resumeData = null;
-        try {
-          const { data, error } = await supabase
-            .from('resumes')
-            .select('*')
-            .eq('user_id', user.id)
-            .maybeSingle();
-            
-          if (error) {
-            console.warn('Resume fetch error (non-critical):', error);
-          } else {
-            resumeData = data;
-            console.log('Resume data fetched:', resumeData ? 'success' : 'empty');
-          }
-        } catch (resumeError) {
-          console.warn('Resume fetch exception (non-critical):', resumeError);
-          // Non-critical error, continue without resume data
-        }
-
-        // Set profile data from fetched data or create default
-        if (profileData) {
-          setProfile(profileData);
+        if (error) {
+          console.warn('Resume fetch error (non-critical):', error);
         } else {
-          console.log('Creating default profile from user data');
-          const defaultProfile = {
-            id: user.id,
-            email: user.email,
-            first_name: user.user_metadata?.first_name || '',
-            last_name: user.user_metadata?.last_name || '',
-            profile_picture: null,
-            bio: '',
-            phone: '',
-            address: '',
-            linkedin: '',
-            github: '',
-            twitter: ''
-          };
-          setProfile(defaultProfile);
+          resumeData = data;
+          console.log('Resume data fetched:', resumeData ? 'success' : 'empty');
         }
-
-        setResume(resumeData);
-        console.log('Profile data loading complete');
-      } catch (error) {
-        console.error('Error in fetchData:', error);
-        setError(error.message || 'Failed to load profile');
-      } finally {
-        setLoading(false);
-        if (globalTimeoutId) clearTimeout(globalTimeoutId);
+      } catch (resumeError) {
+        console.warn('Resume fetch exception (non-critical):', resumeError);
+        // Non-critical error, continue without resume data
       }
-    };
 
-    fetchData();
-    // Cleanup
-    return () => {
-      if (globalTimeoutId) clearTimeout(globalTimeoutId);
-    };
-  }, []);
+      // Set profile data from fetched data or create default
+      const finalProfileData = profileData || {
+        id: user.id,
+        email: user.email,
+        first_name: user.user_metadata?.first_name || '',
+        last_name: user.user_metadata?.last_name || '',
+        profile_picture: null,
+        bio: '',
+        phone: '',
+        address: '',
+        linkedin: '',
+        github: '',
+        twitter: ''
+      };
+      
+      // Update refs first, then state to avoid race conditions
+      profileRef.current = finalProfileData;
+      resumeRef.current = resumeData;
+      
+      setProfile(finalProfileData);
+      setResume(resumeData);
+      dataFetchedRef.current = true;
+      
+      console.log('Profile data loading complete');
+    } catch (error) {
+      console.error('Error in fetchData:', error);
+      setError(error.message || 'Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user?.email, user?.user_metadata?.first_name, user?.user_metadata?.last_name, authLoading]); // Added all user dependencies
 
-  useEffect(() => {
-    const fetchProfileViews = async () => {
+  // Fetch profile views separately to avoid unnecessary re-renders
+  const fetchProfileViews = useCallback(async () => {
+    // Prevent duplicate fetches
+    if (viewsFetchedRef.current || !user?.id || authLoading) return;
+    
+    try {
+      setLoadingViews(true);
+      console.log('Starting profile views fetch');
+      
+      // Try to fetch from notifications table, fall back to mock data
       try {
-        setLoadingViews(true);
-        console.log('Starting profile views fetch');
+        const { count, error: tableError } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true });
         
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          console.log('No authenticated user found');
-          setProfileViews([]);
-          setLoadingViews(false);
+        if (tableError) {
+          console.error('Notifications table error:', tableError);
+          
+          // Create mock data for demo purposes
+          const mockViews = [
+            {
+              company_name: 'TechCorp Inc.',
+              viewed_at: new Date().toISOString(),
+            },
+            {
+              company_name: 'Global Innovations',
+              viewed_at: new Date(Date.now() - 86400000).toISOString(), // yesterday
+            }
+          ];
+          
+          console.log('Using mock profile views for demo:', mockViews);
+          setProfileViews(mockViews);
+          viewsFetchedRef.current = true;
           return;
         }
-
-        console.log('Authenticated user ID:', user.id);
         
-        // First check if notifications table exists
-        try {
-          const { count, error: tableError } = await supabase
-            .from('notifications')
-            .select('*', { count: 'exact', head: true });
-          
-          if (tableError) {
-            console.error('Notifications table error:', tableError);
-            
-            // Create mock data for demo purposes since the table doesn't exist
-            const mockViews = [
-              {
-                company_name: 'TechCorp Inc.',
-                viewed_at: new Date().toISOString(),
-              },
-              {
-                company_name: 'Global Innovations',
-                viewed_at: new Date(Date.now() - 86400000).toISOString(), // yesterday
-              }
-            ];
-            
-            console.log('Using mock profile views for demo:', mockViews);
-            setProfileViews(mockViews);
-            setLoadingViews(false);
-            return;
-          }
-          
-          console.log('Notifications table exists, count:', count);
-        } catch (tableCheckError) {
-          console.error('Error checking notifications table:', tableCheckError);
-          setProfileViews([]);
-          setLoadingViews(false);
-          return;
-        }
-
+        console.log('Notifications table exists, count:', count);
+        
         // Fetch notifications of type 'profile_view' for the current user
         const { data: notifications, error } = await supabase
           .from('notifications')
@@ -258,7 +227,6 @@ function CandidateProfilePage() {
         if (error) {
           console.error('Error fetching notifications:', error);
           setProfileViews([]);
-          setLoadingViews(false);
           return;
         }
 
@@ -267,7 +235,6 @@ function CandidateProfilePage() {
         if (!notifications || notifications.length === 0) {
           console.log('No profile view notifications found');
           setProfileViews([]);
-          setLoadingViews(false);
           return;
         }
 
@@ -280,17 +247,82 @@ function CandidateProfilePage() {
         
         console.log('Processed profile views:', views);
         setProfileViews(views);
-      } catch (error) {
-        console.error('Error in fetchProfileViews:', error);
-        // Don't break the UI for this non-critical feature
+      } catch (tableCheckError) {
+        console.error('Error checking notifications table:', tableCheckError);
         setProfileViews([]);
-      } finally {
-        setLoadingViews(false);
+      }
+    } catch (error) {
+      console.error('Error in fetchProfileViews:', error);
+      setProfileViews([]);
+    } finally {
+      setLoadingViews(false);
+      viewsFetchedRef.current = true;
+    }
+  }, [user?.id, authLoading]); // Only depend on user ID and auth loading state
+
+  // Effect to fetch data when user is available
+  useEffect(() => {
+    if (user?.id && !authLoading && !dataFetchedRef.current) {
+      fetchData();
+    }
+  }, [user?.id, authLoading, fetchData]);
+  
+  // Separate effect for profile views
+  useEffect(() => {
+    if (user?.id && !authLoading && !viewsFetchedRef.current) {
+      fetchProfileViews();
+    }
+  }, [user?.id, authLoading, fetchProfileViews]);
+
+  // Safety timeout to prevent stuck loading state
+  useEffect(() => {
+    let timeoutId;
+    
+    if (loading) {
+      timeoutId = setTimeout(() => {
+        // Only force-exit loading state if we're still loading after timeout
+        if (loading) {
+          console.warn('Loading timeout exceeded, forcing state update');
+          setLoading(false);
+          
+          // Use cached data if available
+          if (!profile && profileRef.current) {
+            setProfile(profileRef.current);
+          }
+          
+          if (!profile && !profileRef.current) {
+            setError('Loading timed out. Please refresh the page to try again.');
+          }
+        }
+      }, 10000); // 10-second timeout
+    }
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [loading, profile]);
+  
+  // Handle tab visibility changes to prevent data loss
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // When tab becomes visible again, restore from refs if needed
+        console.log('Tab visible again, checking cached data');
+        if (profileRef.current && !profile) {
+          setProfile(profileRef.current);
+        }
+        if (resumeRef.current && !resume) {
+          setResume(resumeRef.current);
+        }
       }
     };
-
-    fetchProfileViews();
-  }, []);
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [profile, resume]);
 
   const parseField = (field) => {
     if (!field) return [];
@@ -303,12 +335,8 @@ function CandidateProfilePage() {
     }
     return field;
   };
-
   
   const renderProfileViews = () => {
-    // Check if we have any profile views data to display
-    console.log('Profile views to render:', profileViews);
-    
     return (
       <Box sx={{ mt: 4 }}>
         <SectionHeader 
@@ -378,21 +406,6 @@ function CandidateProfilePage() {
     );
   };
 
-  // Add a loading timeout to prevent getting stuck in loading state
-  useEffect(() => {
-    if (loading) {
-      const timeoutId = setTimeout(() => {
-        console.log('Loading timeout reached, forcing completion');
-        setLoading(false);
-        if (!profile) {
-          setError('Loading timeout reached. Please refresh the page.');
-        }
-      }, 5000); // 5-second timeout
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [loading, profile]);
-  
   if (loading) return (
     <Box sx={{ 
       display: 'flex', 
@@ -405,6 +418,7 @@ function CandidateProfilePage() {
       <Typography>Loading profile...</Typography>
     </Box>
   );
+
   if (error) return <Typography color="error">Error: {error}</Typography>;
 
   if (!profile) {
@@ -426,6 +440,7 @@ function CandidateProfilePage() {
     );
   }
 
+  // Render the main profile page UI after auth checks
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>
       {/* Profile Header */}
@@ -448,7 +463,6 @@ function CandidateProfilePage() {
             opacity: 0.9,
           }}
         />
-        
         {/* Profile Content Card */}
         <Card
           sx={{
@@ -488,7 +502,6 @@ function CandidateProfilePage() {
             >
               {profile.first_name ? profile.first_name[0].toUpperCase() : '?'}
             </Avatar>
-            
             <Box sx={{ flex: 1 }}>
               <Typography 
                 variant="h3" 
@@ -500,7 +513,6 @@ function CandidateProfilePage() {
               >
                 {profile.first_name} {profile.last_name}
               </Typography>
-              
               <Typography 
                 variant="body1" 
                 sx={{ 
@@ -514,7 +526,6 @@ function CandidateProfilePage() {
               >
                 {profile.bio || 'No bio available'}
               </Typography>
-              
               <Stack 
                 direction="row" 
                 spacing={1.5} 
@@ -540,7 +551,6 @@ function CandidateProfilePage() {
                     </IconButton>
                   </Tooltip>
                 )}
-                
                 {profile.phone && (
                   <Tooltip title="Phone">
                     <IconButton 
@@ -558,7 +568,6 @@ function CandidateProfilePage() {
                     </IconButton>
                   </Tooltip>
                 )}
-                
                 {profile.linkedin && (
                   <Tooltip title="LinkedIn">
                     <IconButton 
@@ -578,7 +587,6 @@ function CandidateProfilePage() {
                     </IconButton>
                   </Tooltip>
                 )}
-                
                 {profile.github && (
                   <Tooltip title="GitHub">
                     <IconButton 
@@ -602,8 +610,7 @@ function CandidateProfilePage() {
             </Box>
           </Box>
         </Card>
-        
-        {/* Actions Bar - Floating below profile card */}
+        {/* Actions Bar */}
         <Card
           sx={{
             mx: { xs: 2, md: 6 },
@@ -639,7 +646,6 @@ function CandidateProfilePage() {
           >
             Edit Profile
           </Button>
-          
           {resume && (
             <>
               <Button
@@ -703,11 +709,8 @@ function CandidateProfilePage() {
               </Button>
             </>
           )}
-          
-
         </Card>
       </Box>
-
       {/* Main Content */}
       <Grid container spacing={4}>
         <Grid item xs={12} md={8}>

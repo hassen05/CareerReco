@@ -122,7 +122,8 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/profile/:user_id" element={<PublicProfilePage />} />
+          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/profile/:id" element={<ProfilePage />} />
           <Route 
             path="/interview-trainer" 
             element={

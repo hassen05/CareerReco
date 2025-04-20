@@ -1,72 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import React from 'react';
+import { useParams } from 'react-router-dom';
 import CandidateProfilePage from './CandidateProfilePage';
 import RecruiterProfilePage from './RecruiterProfilePage';
-import { notificationService } from '../services/notificationService';
+import PublicProfilePage from './PublicProfilePage';
 import { useAuth } from '../contexts/AuthContext';
 
+// Simple loading component to avoid re-renders
+const LoadingComponent = () => <div className="loading-container">Loading profile...</div>;
+const LoginMessage = () => <div className="login-message">Please log in to view profiles</div>;
+
 function ProfilePage() {
+  // Get params and auth state
   const { id } = useParams();
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const { user } = useAuth();
-  const [userRole, setUserRole] = useState(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const getUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserRole(user.user_metadata?.role || 'candidate');
-      }
-    };
-    getUserRole();
-  }, []);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', id)
-          .single();
-
-        if (error) throw error;
-        setProfile(data);
-
-        // Create notification if viewer is a recruiter
-        if (user && user.role === 'recruiter' && data.id !== user.id) {
-          await notificationService.createNotification(
-            data.id,
-            'profile_view',
-            `${user.email} viewed your profile`,
-            {
-              viewer_id: user.id,
-              company_name: user.user_metadata?.company || 'Company'
-            }
-          );
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [id, user]);
-
-  if (userRole === 'recruiter') {
-    return <RecruiterProfilePage />;
-  } else if (userRole === 'candidate') {
-    return <CandidateProfilePage />;
+  const { user, loading: authLoading } = useAuth();
+  
+  // Handle loading state
+  if (authLoading) return <LoadingComponent />;
+  
+  // Handle unauthenticated state
+  if (!user || !user.id) return <LoginMessage />;
+  
+  // Determine which profile to show
+  if (!id || user.id === id) {
+    // Viewing own profile - show based on role
+    const role = user.user_metadata?.role || 'candidate';
+    
+    if (role === 'recruiter') {
+      return <RecruiterProfilePage />;
+    } else {
+      return <CandidateProfilePage />;
+    }
+  } else {
+    // Viewing someone else's profile
+    return <PublicProfilePage user_id={id} />;
   }
-
-  return <div>Loading...</div>;
 }
 
 export default ProfilePage;
