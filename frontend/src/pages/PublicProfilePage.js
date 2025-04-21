@@ -4,40 +4,91 @@ import { supabase } from '../supabaseClient';
 import { Container, Typography, CircularProgress, Alert, Box, Paper, Chip, Avatar, Link } from '@mui/material';
 import { LinkedIn, GitHub, Twitter, Language, School } from '@mui/icons-material';
 
-function PublicProfilePage() {
-  const { user_id } = useParams();
+function PublicProfilePage({ user_id: propUserId }) {
+  // Get user_id from URL params or from props
+  const { user_id: paramUserId } = useParams();
+  
+  // Use prop value first, fall back to URL parameter
+  const user_id = propUserId || paramUserId;
+  
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Debug log for user ID sources
+  console.log('PublicProfilePage: Props user_id =', propUserId);
+  console.log('PublicProfilePage: URL parameter user_id =', paramUserId);
+  console.log('PublicProfilePage: Final user_id =', user_id);
+  console.log('PublicProfilePage: Current URL =', window.location.pathname);
+
   useEffect(() => {
+    // Guard against missing or invalid user_id
+    if (!user_id || user_id === 'undefined' || user_id === 'null') {
+      console.error('PublicProfilePage: Missing or invalid user_id parameter:', user_id);
+      setError('Invalid profile link: Missing or invalid user ID parameter');
+      setLoading(false);
+      return;
+    }
+
     const fetchProfile = async () => {
       try {
         setLoading(true);
         setError(null);
-        // Fetch candidate profile
-        const { data: profile, error: profileError } = await supabase
+        console.log('PublicProfilePage: Fetching profile for user_id =', user_id);
+        
+        // Try candidate profile first
+        let { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user_id)
           .single();
+        
+        let profileType = 'candidate';
+        console.log('PublicProfilePage: Candidate profile search result =', { profile, error: profileError });
+        
+        // If not found, try recruiter profile
         if (profileError || !profile) {
-          throw new Error('Profile not found');
+          console.log('PublicProfilePage: Candidate profile not found, trying recruiter profile');
+          const { data: recruiterProfile, error: recruiterError } = await supabase
+            .from('recruiter_profiles')
+            .select('*')
+            .eq('id', user_id)
+            .single();
+            
+          console.log('PublicProfilePage: Recruiter profile search result =', { recruiterProfile, error: recruiterError });
+          
+          if (recruiterError || !recruiterProfile) {
+            console.error('PublicProfilePage: Profile not found in either profiles or recruiter_profiles tables');
+            throw new Error('Profile not found');
+          }
+          profile = recruiterProfile;
+          profileType = 'recruiter';
         }
-        // Fetch candidate resume
-        const { data: resume, error: resumeError } = await supabase
-          .from('resumes')
-          .select('*')
-          .eq('user_id', user_id)
-          .single();
-        // Resume is optional
-        setProfileData({ profile, resume });
+        
+        // Fetch resume only for candidates
+        let resume = null;
+        if (profileType === 'candidate') {
+          console.log('PublicProfilePage: Fetching resume for candidate');
+          const { data: resumeData, error: resumeError } = await supabase
+            .from('resumes')
+            .select('*')
+            .eq('user_id', user_id)
+            .single();
+          
+          console.log('PublicProfilePage: Resume search result =', { resumeData, error: resumeError });
+          resume = resumeData;
+        }
+        
+        console.log('PublicProfilePage: Setting profile data =', { profile, profileType, resume });
+        setProfileData({ profile, profileType, resume });
       } catch (err) {
+        console.error('PublicProfilePage: Error fetching profile:', err.message);
         setError(`Failed to load profile: ${err.message || 'Unknown error'}`);
       } finally {
         setLoading(false);
       }
     };
+
     fetchProfile();
   }, [user_id]);
 

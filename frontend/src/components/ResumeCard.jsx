@@ -180,7 +180,7 @@ const ResumeCard = ({ resume }) => {
   })();
 
   const handleCardClick = async () => {
-    if (resumeData?.user_id) {
+    if (resumeData?.user_id && resumeData.user_id !== 'undefined' && resumeData.user_id !== undefined && resumeData.user_id !== null && resumeData.user_id !== '') {
       try {
         console.log('Current user:', user);
         console.log('Resume user ID:', resumeData.user_id);
@@ -188,18 +188,18 @@ const ResumeCard = ({ resume }) => {
         // Create notification if the viewer is a recruiter
         if (user && user.user_metadata?.account_type === 'recruiter' && resumeData.user_id !== user.id) {
           console.log('Creating notification for recruiter view');
-            try {
-              const result = await notificationService.createNotification(
-                resumeData.user_id,
-                'profile_view',
-                `${user.user_metadata?.company || 'A company'} viewed your profile`,
-                { 
-                  viewer_id: user.id,
-                  viewer_company: user.user_metadata?.company || 'Unknown Company',
-                  viewer_email: user.email,
-                  viewer_profile_picture: user.user_metadata?.avatar_url || null
-                }
-              );
+          try {
+            const result = await notificationService.createNotification(
+              resumeData.user_id,
+              'profile_view',
+              `${user.user_metadata?.company || 'A company'} viewed your profile`,
+              { 
+                viewer_id: user.id,
+                viewer_company: user.user_metadata?.company || 'Unknown Company',
+                viewer_email: user.email,
+                viewer_profile_picture: user.user_metadata?.avatar_url || null
+              }
+            );
             console.log('Notification creation result:', result);
           } catch (err) {
             console.error('Error creating notification:', err);
@@ -210,17 +210,23 @@ const ResumeCard = ({ resume }) => {
         console.error("Error in handleCardClick:", err);
         alert("Profile navigation is not available at this time.");
       }
+    } else {
+      console.warn('Cannot navigate: resumeData.user_id is missing or invalid:', resumeData?.user_id);
+      alert('Cannot view profile: This resume is missing a user ID.');
     }
   };
 
   const handleOpenNewTab = async (e) => {
     e.stopPropagation();
-    if (resumeData?.user_id) {
+    if (resumeData?.user_id && resumeData.user_id !== 'undefined' && resumeData.user_id !== undefined && resumeData.user_id !== null && resumeData.user_id !== '') {
       try {
         window.open(`/profile/${resumeData.user_id}`, '_blank');
       } catch (err) {
         console.error("Error in handleOpenNewTab:", err);
       }
+    } else {
+      console.warn('Cannot open new tab: resumeData.user_id is missing or invalid:', resumeData?.user_id);
+      alert('Cannot view profile: This resume is missing a user ID.');
     }
   };
 
