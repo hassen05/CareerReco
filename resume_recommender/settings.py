@@ -35,16 +35,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-k@h82y0_5w^!x#e#4xjrvfkbozo)pucww=%@xmd288gg@t3z5w"
+# It is recommended to set SECRET_KEY in your .env file or environment variables.
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    # Fallback for development only
+    SECRET_KEY = 'insecure-development-key'
+    print('WARNING: SECRET_KEY not set in environment! Using insecure fallback. Set DJANGO_SECRET_KEY in your .env for production.')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '192.168.1.*',  # Local network range - adjust based on your network
-    'your-production-domain.com',  # If deployed
+    'career-reco.vercel.app',  # If deployed
 ]
 
 
