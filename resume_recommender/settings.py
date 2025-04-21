@@ -50,8 +50,14 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '192.168.1.*',  # Local network range - adjust based on your network
     'career-reco.vercel.app',  # If deployed
+    'careerreco.onrender.com',  # Render backend domain
 ]
 
+
+# WhiteNoise static files configuration (for production)
+# Make sure to add 'whitenoise' to requirements.txt
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Application definition
 
@@ -69,6 +75,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # WhiteNoise after SecurityMiddleware
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -77,6 +84,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     'recommender.middleware.SupabaseAuthentication',
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 # Update the CORS settings to allow requests from your mobile app
