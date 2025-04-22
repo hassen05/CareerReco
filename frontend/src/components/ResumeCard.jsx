@@ -1,5 +1,5 @@
 // components/ResumeCard.js
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -144,8 +144,11 @@ const ResumeCard = ({ resume }) => {
     ? `${resumeData.experience[0].position || resumeData.experience[0].title || 'Position'} at ${resumeData.experience[0].company || resumeData.experience[0].employer || 'Company'}`
     : 'No experience information available';
     
-  // Debug log to help diagnose what's in the resume object
-  console.log('Resume data:', resume);
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Resume data:', resumeData);
+    }
+  }, [resumeData]);
     
   // Safe access to arrays with resumeData (supports both NLP and LLM formats)
   const skills = Array.isArray(resumeData?.skills) ? resumeData.skills : [];
@@ -462,4 +465,5 @@ const ResumeCard = ({ resume }) => {
   );
 };
 
-export default ResumeCard;
+// Wrap with React.memo to prevent unnecessary re-renders
+export default React.memo(ResumeCard);

@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
 from supabase import create_client
 import os
-from sentence_transformers import SentenceTransformer
+# from sentence_transformers import SentenceTransformer  # now loaded lazily from utils
 import numpy as np
 import base64
 from .llm_recommender import recommend_resumes_llm, hybrid_recommend_resumes
@@ -241,7 +241,8 @@ def get_profile(user_id):
 
 class GenerateEmbeddingAPI(APIView):
     def __init__(self):
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        from .utils import get_sentence_transformer
+        self.model = get_sentence_transformer()
 
     def post(self, request):
         try:

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { 
   Container, 
@@ -161,8 +161,8 @@ function ResumeRecommender() {
     setError(null);
   };
   
-  // Format recommendations to be compatible with ResumeCard
-  const formatRecommendations = useCallback((recommendations) => {
+  // Format recommendations for consistent display - memoized to prevent unnecessary recalculations
+  const formatRecommendations = useMemo(() => {
     console.log("Formatting recommendations:", recommendations);
     
     return recommendations.map(rec => {
@@ -256,7 +256,7 @@ function ResumeRecommender() {
       
       return formattedResume;
     });
-  }, [showLlmDetails]);
+  }, [recommendations, showLlmDetails]); // Only recalculate when these change
 
   return (
     <Box>
@@ -309,7 +309,7 @@ function ResumeRecommender() {
                   Found {recommendations.length} matching candidates
                 </Typography>
                 <Grid container spacing={3}>
-                  {formatRecommendations(recommendations).map((resume, index) => (
+                  {formatRecommendations.map((resume, index) => (
                     <Grid item key={index} xs={12} md={6} lg={4}>
                       <ResumeCard resume={resume} />
                     </Grid>

@@ -21,9 +21,23 @@ from nltk.corpus import stopwords
 from string import punctuation
 from sklearn.feature_extraction.text import CountVectorizer
 
-# Load models
-nlp = spacy.load("en_core_web_sm")
-model = SentenceTransformer("all-MiniLM-L6-v2")
+# Lazy-load models with simple caching to avoid repeated loading
+_nlp = None
+_model = None
+
+def get_nlp():
+    global _nlp
+    if _nlp is None:
+        import spacy
+        _nlp = spacy.load("en_core_web_sm")
+    return _nlp
+
+def get_sentence_transformer():
+    global _model
+    if _model is None:
+        from sentence_transformers import SentenceTransformer
+        _model = SentenceTransformer("all-MiniLM-L6-v2")
+    return _model
 
 # Configuration - Adjust these weights based on importance
 WEIGHTS = {
@@ -177,7 +191,7 @@ def validate_resume(resume):
 
 def extract_job_requirements(job_desc):
     """Advanced requirement extraction with tech stack analysis"""
-    doc = nlp(job_desc.lower())
+    doc = get_nlp()(job_desc.lower())
     
     requirements = {
         'tech_stack': defaultdict(lambda: {'years': 0, 'priority': 1}),
@@ -188,7 +202,7 @@ def extract_job_requirements(job_desc):
     }
 
     # Pattern matching for experience requirements
-    for match in nlp(job_desc).ents:
+    for match in get_nlp()(job_desc).ents:
         if match.label_ == 'DATE' and 'year' in match.text:
             # Find associated technology
             for token in match.root.head.children:
@@ -292,7 +306,7 @@ def get_job_embedding(job_desc):
     embedding = cache.get(cache_key)
     
     if not embedding:
-        embedding = model.encode(job_desc).tobytes()
+        embedding = get_sentence_transformer().encode(job_desc).tobytes()
         cache.set(cache_key, embedding, timeout=3600)  # Cache for 1 hour
     
     logger.debug(f"Job Embedding Length: {len(embedding)}")
@@ -323,7 +337,7 @@ def extract_keywords_and_requirements(text):
     """Extract job requirements using advanced NLP techniques without domain-specific hardcoding"""
     
     # 1. Use NLP to find requirements based on linguistic patterns
-    doc = nlp(text.lower())
+    doc = get_nlp()(text.lower())
     
     # Collect noun phrases that follow skill indicators
     skill_indicators = ['experience in', 'knowledge of', 'skilled in', 'proficient with', 
@@ -338,7 +352,7 @@ def extract_keywords_and_requirements(text):
             # Extract a meaningful chunk following the indicator
             end_idx = min(idx + len(indicator) + 100, len(text))
             fragment = text[idx + len(indicator):end_idx]
-            fragment_doc = nlp(fragment)
+            fragment_doc = get_nlp(fragment)
             
             # Get noun phrases (more meaningful than single nouns)
             for chunk in fragment_doc.noun_chunks:
@@ -445,7 +459,7 @@ def recommend_resumes(job_desc, resumes, top_n=5):
         logger.info(f"Extracted requirements: {job_requirements}")
         
         # Generate job description embedding for semantic matching
-        job_embedding = model.encode(job_desc)
+        job_embedding = get_sentence_transformer().encode(job_desc)
         
         scores = []
         for resume in resumes:
@@ -584,7 +598,7 @@ def calculate_education_score(candidate_edu, required_edu):
 
 def preprocess_text(text):
     """Clean and standardize text before embedding"""
-    doc = nlp(text.lower())
+    doc = get_nlp()(text.lower())
     tokens = [token.text for token in doc 
              if not token.is_stop and not token.is_punct]
     return " ".join(tokens)
@@ -599,7 +613,8 @@ def get_skill_similarity(resume_skills, job_skills):
 
 @lru_cache(maxsize=1000)
 def get_embedding(text):
-    """Cache embeddings for better performance"""
+    """Cache embeddings for better performance using lazy-loaded model."""
+    model = get_sentence_transformer()
     return model.encode([text])[0]
 
 def log_recommendation_metrics(job_desc, num_candidates, duration):
