@@ -611,11 +611,18 @@ def get_skill_similarity(resume_skills, job_skills):
         return 0
     return len(resume_set.intersection(job_set)) / len(job_set)
 
-@lru_cache(maxsize=1000)
 def get_embedding(text):
-    """Cache embeddings for better performance using lazy-loaded model."""
-    model = get_sentence_transformer()
-    return model.encode([text])[0]
+    """Generate embedding for the given text using lazy-loaded model. Logs execution for debugging."""
+    try:
+        logger.info(f"Calling get_sentence_transformer() for embedding generation.")
+        model = get_sentence_transformer()
+        logger.info(f"Model loaded: {model}")
+        embedding = model.encode([text])[0]
+        logger.info(f"Generated embedding of length {len(embedding)} for text of length {len(text)}.")
+        return embedding
+    except Exception as e:
+        logger.error(f"Error generating embedding: {e}")
+        return None
 
 def log_recommendation_metrics(job_desc, num_candidates, duration):
     """Log recommendation performance metrics"""
