@@ -25,6 +25,9 @@ import ResumeCard from '../components/ResumeCard.jsx';
 import PageHero from '../components/PageHero';
 import { alpha } from '@mui/material/styles';
 
+// Use environment variable for API base URL
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 // Debounce function
 const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -91,14 +94,14 @@ function ResumeRecommender() {
     
     try {
       // Determine which API endpoint to use based on recommendation type
-      let endpoint = "http://localhost:8000/api/recommend/";
+      let endpoint = `${API_BASE_URL}/recommend/`;
       const apiParams = {
         job_description: params.jobDesc,
         top_n: params.topN
       };
       
       if (params.recommendationType === 'hybrid' || params.recommendationType === 'llm_only') {
-        endpoint = "http://localhost:8000/api/recommend/llm/";
+        endpoint = `${API_BASE_URL}/recommend/llm/`;
         apiParams.model = params.llmModel;
         apiParams.recommendation_type = params.recommendationType === 'hybrid' ? 'hybrid' : 'llm_only';
       }
@@ -139,7 +142,7 @@ function ResumeRecommender() {
       setLoading(true);
       setError(null);
       
-      axios.post("http://localhost:8000/api/recommend/", {
+      axios.post(`${API_BASE_URL}/recommend/`, {
         job_description: debouncedJobDesc,
         top_n: topN
       })

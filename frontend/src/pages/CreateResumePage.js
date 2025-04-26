@@ -34,6 +34,9 @@ const CreateResumePage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  // Use environment variable for API base URL
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
   useEffect(() => {
     const fetchResume = async () => {
       try {
@@ -169,7 +172,7 @@ const CreateResumePage = () => {
         certifications: resumeData.certifications
       };
 
-      const response = await axios.post("http://localhost:8000/api/generate-embedding/", {
+      const response = await axios.post(`${API_BASE_URL}/generate-embedding/`, {
         resume_data: embeddingData,
       });
 
