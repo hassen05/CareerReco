@@ -20,4 +20,6 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('recommender.urls')),  # Include recommender app URLs
+    path('', include('recommender.urls')),  # This line is required!
+
 ]

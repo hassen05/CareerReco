@@ -13,6 +13,7 @@ import os
 import numpy as np
 import base64
 from .llm_recommender import recommend_resumes_llm, hybrid_recommend_resumes
+from django.views.generic import TemplateView
 
 logger = logging.getLogger('recommender')
 
@@ -285,3 +286,6 @@ class GenerateEmbeddingAPI(APIView):
         except Exception as e:
             logger.error(f"Error calculating experience: {str(e)}")
             return 0
+
+class LandingPageView(TemplateView):
+    template_name = "landing.html"
