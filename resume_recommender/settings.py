@@ -88,11 +88,13 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
-# Update the CORS settings to allow requests from your mobile app
+# --- CORS and CSRF settings for frontend integration ---
+# Update the CORS settings to allow requests from your mobile app and deployed frontend
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
     "https://career-reco.vercel.app",
+    "https://careerreco-production.up.railway.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -105,7 +107,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:19002",
     "exp://localhost:19000",   # Expo client URLs
     "exp://192.168.1.*:19000", # Local network IP ranges for Expo
-    "https://your-production-api.com",  # Your production API URL if deployed
+    "https://careerreco-production.up.railway.app",  # Render backend domain
 ]
 
 # Allow all methods for the mobile app
@@ -251,4 +253,3 @@ CACHES = {
         "LOCATION": "unique-snowflake",  # Unique identifier for the cache
     }
 }
-
