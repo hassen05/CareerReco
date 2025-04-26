@@ -50,7 +50,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '192.168.1.*',  # Local network range - adjust based on your network
     'career-reco.vercel.app',  # If deployed
-    'careerreco.onrender.com',  # Render backend domain
+    'careerreco-production.up.railway.app',  # Render backend domain
 ]
 
 
