@@ -11,7 +11,7 @@ const HomePage = () => {
   const features = [
     {
       title: "For Job Seekers",
-      description: "Create your professional profile and let AI match you with the perfect opportunities.",
+      description: "Create your professional profile and let AI match you with the perfect opportunities on QuirkHire.",
       icon: "👤",
       gradient: "linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%)",
       items: [
@@ -24,7 +24,7 @@ const HomePage = () => {
     },
     {
       title: "For Recruiters",
-      description: "Access our extensive database of candidates and find the perfect match using AI.",
+      description: "Access our extensive database of candidates and find the perfect match using AI on QuirkHire.",
       icon: "🎯",
       gradient: "linear-gradient(135deg, #4ECDC4 0%, #556270 100%)",
       items: [
@@ -38,33 +38,33 @@ const HomePage = () => {
   ];
 
   const stats = [
-    { value: "10,000+", label: "Successful Matches" },
-    { value: "95%", label: "Candidate Satisfaction" },
-    { value: "3x", label: "Faster Hiring" },
-    { value: "50+", label: "Industries Served" }
+    { value: "10,000+", label: "Successful Matches on QuirkHire" },
+    { value: "95%", label: "Candidate Satisfaction with QuirkHire" },
+    { value: "3x", label: "Faster Hiring with QuirkHire" },
+    { value: "50+", label: "Industries Served by QuirkHire" }
   ];
 
   const testimonials = [
     {
-      quote: "ResumeRec has completely transformed our hiring process. The AI matching is incredibly accurate and has saved us countless hours.",
+      quote: "QuirkHire has completely transformed our hiring process. The AI matching is incredibly accurate and has saved us countless hours.",
       name: "John Doe",
       role: "HR Manager, TechCorp",
       avatar: "/path/to/avatar1.jpg"
     },
     {
-      quote: "As a job seeker, ResumeRec helped me find the perfect role that matched my skills and career goals.",
+      quote: "As a job seeker, QuirkHire helped me find the perfect role that matched my skills and career goals.",
       name: "Jane Smith",
       role: "Software Engineer",
       avatar: "/path/to/avatar2.jpg"
     },
     {
-      quote: "The platform's intuitive interface and powerful matching algorithm have made recruitment a breeze for our team.",
+      quote: "The platform's intuitive interface and powerful matching algorithm have made recruitment a breeze for our team on QuirkHire.",
       name: "Michael Johnson",
       role: "Talent Acquisition Lead",
       avatar: "/path/to/avatar3.jpg"
     },
     {
-      quote: "I was amazed by how quickly ResumeRec connected me with relevant job opportunities. It's a game-changer!",
+      quote: "I was amazed by how quickly QuirkHire connected me with relevant job opportunities. It's a game-changer!",
       name: "Sarah Williams",
       role: "Data Scientist",
       avatar: "/path/to/avatar4.jpg"
@@ -127,7 +127,7 @@ const HomePage = () => {
             fontWeight: 700,
             color: 'primary.main'
           }}>
-            Designed for Everyone
+            Designed for Everyone on QuirkHire
           </Typography>
           <Grid container spacing={6}>
             {features.map((feature, index) => (
@@ -232,7 +232,7 @@ const HomePage = () => {
                     borderRadius: 2
                   }
                 }}>
-                  See It in Action
+                  See QuirkHire in Action
                 </Typography>
                 <Typography variant="h6" sx={{ 
                   mb: 4,
@@ -241,7 +241,7 @@ const HomePage = () => {
                 }}>
                   Watch how our AI-powered platform streamlines your recruitment process, 
                   saving you hours of manual resume screening and helping you find the 
-                  perfect candidates faster than ever.
+                  perfect candidates faster than ever on QuirkHire.
                 </Typography>
                 <Button
                   variant="contained"
@@ -321,10 +321,10 @@ const HomePage = () => {
               fontWeight: 700,
               color: 'primary.main'
             }}>
-              Ready to Transform Your Hiring?
+              Ready to Transform Your Hiring with QuirkHire?
             </Typography>
             <Typography variant="h6" sx={{ mb: 4, color: 'text.secondary' }}>
-              Join hundreds of companies already using ResumeRec
+              Join hundreds of companies already using QuirkHire
             </Typography>
             <Button 
               variant="contained" 
@@ -387,7 +387,7 @@ const HomePage = () => {
               fontSize: { xs: '2rem', md: '3rem' },
               lineHeight: 1.2,
               mb: 2,
-              background: 'linear-gradient(45deg, #553d8e 30%, #9ba2c2 90%)',
+              background: 'linear-gradient(45deg, #553d8e 0%, #9ba2c2 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               display: 'inline-block',
@@ -404,7 +404,7 @@ const HomePage = () => {
                 borderRadius: 2
               }
             }}>
-              What Our Users Are Saying
+              What Our Users Are Saying About QuirkHire
             </Typography>
             <Typography variant="subtitle1" sx={{
               color: 'text.secondary',
@@ -412,7 +412,7 @@ const HomePage = () => {
               mx: 'auto',
               fontSize: { xs: '1rem', md: '1.125rem' }
             }}>
-              Discover how industry leaders are transforming their hiring processes
+              Discover how industry leaders are transforming their hiring processes with QuirkHire
             </Typography>
           </Box>
 

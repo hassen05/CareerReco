@@ -438,7 +438,7 @@ const Navbar = () => {
                     WebkitTextFillColor: 'transparent'
                   }}
                 >
-                  Recruiter.ai
+                  QuirkHire
                 </Typography>
               </motion.div>
             </Box>
