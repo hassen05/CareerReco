@@ -1,12 +1,5 @@
 # QuirkHire: AI-Powered Career Recommendation Platform
 
-<div align="center">
-  
-  ![QuirkHire Banner](frontend/public/AboutUs.jpg)
-  
-  **Revolutionizing how talent and opportunity connect.**
-
-</div>
 
 ## 🚀 Overview
 
