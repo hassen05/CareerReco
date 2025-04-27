@@ -408,16 +408,16 @@ const Navbar = () => {
     <HideOnScroll>
       <AppBar
         position="sticky"
-        color="default"
+        elevation={0}
         sx={{
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(8px)',
-          boxShadow: '0 2px 20px rgba(0,0,0,0.03)',
-          borderBottom: '1px solid rgba(0,0,0,0.05)',
+          backgroundColor: 'rgba(255, 255, 255, 0.92)',
+          backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
+          transition: 'all 0.3s ease',
         }}
       >
         <Container maxWidth="xl">
-          <Toolbar sx={{ py: { xs: 1, md: 0.5 } }}>
+          <Toolbar sx={{ py: { xs: 1.2, md: 1 } }}>
             {/* Logo */}
             <Box component={Link} to="/" sx={{
               display: 'flex',
@@ -426,16 +426,31 @@ const Navbar = () => {
             }}>
               <motion.div
                 whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
                 <Typography
                   variant="h5"
                   component="div"
                   sx={{
-                    fontWeight: 700,
-                    background: 'linear-gradient(45deg, #553d8e 30%, #9575cd 90%)',
+                    fontWeight: 800,
+                    fontSize: { xs: '1.5rem', md: '1.8rem' },
+                    background: 'linear-gradient(45deg, #553d8e 20%, #b69ac1 90%)',
                     WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent'
+                    WebkitTextFillColor: 'transparent',
+                    letterSpacing: '-0.02em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    '&::before': {
+                      content: '""',
+                      display: 'inline-block',
+                      width: { xs: 16, md: 20 },
+                      height: { xs: 16, md: 20 },
+                      borderRadius: '50%',
+                      background: 'linear-gradient(45deg, #553d8e 20%, #b69ac1 90%)',
+                      marginRight: 1.5,
+                      boxShadow: '0 2px 10px rgba(182, 154, 193, 0.4)'
+                    }
                   }}
                 >
                   QuirkHire
@@ -446,21 +461,21 @@ const Navbar = () => {
             {/* Desktop Navigation Links */}
             <Box sx={{
               display: { xs: 'none', md: 'flex' },
-              gap: 2,
+              gap: 3,
               alignItems: 'center',
-              ml: 4
+              ml: 6
             }}>
               {allLinks.map((link) => (
                 <motion.div
                   key={link.path}
-                  whileHover={{ y: -2 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  whileHover={{ y: -3 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 17 }}
                 >
                   <Button
                     component={Link}
                     to={link.path}
                     sx={{
-                      color: location.pathname === link.path ? 'primary.main' : 'text.secondary',
+                      color: location.pathname === link.path ? 'primary.dark' : 'text.secondary',
                       fontWeight: location.pathname === link.path ? 600 : 500,
                       textTransform: 'none',
                       fontSize: '1rem',
@@ -473,14 +488,16 @@ const Navbar = () => {
                         content: '""',
                         position: 'absolute',
                         bottom: -2,
-                        left: 0,
-                        width: location.pathname === link.path ? '100%' : '0',
-                        height: '2px',
-                        backgroundColor: 'primary.main',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: location.pathname === link.path ? '70%' : '0',
+                        height: '3px',
+                        borderRadius: '10px',
+                        background: 'linear-gradient(45deg, #553d8e 20%, #b69ac1 90%)',
                         transition: 'width 0.3s ease'
                       },
                       '&:hover::after': {
-                        width: '100%'
+                        width: '70%'
                       }
                     }}
                   >
@@ -504,12 +521,15 @@ const Navbar = () => {
                     onClick={handleProfileMenuOpen}
                     sx={{
                       ml: 2,
-                      p: 1,
+                      p: 0.5,
                       borderRadius: '50%',
+                      background: alpha('#f5f5f5', 0.7),
                       border: '2px solid transparent',
                       transition: 'all 0.2s ease',
                       '&:hover': {
-                        borderColor: alpha('#553d8e', 0.2),
+                        background: alpha('#f0f0f0', 1),
+                        borderColor: alpha('#553d8e', 0.3),
+                        transform: 'scale(1.05)'
                       }
                     }}
                   >
@@ -517,9 +537,10 @@ const Navbar = () => {
                       alt={user.email}
                       src="/avatar-placeholder.jpg"
                       sx={{
-                        width: 36,
-                        height: 36,
-                        bgcolor: 'primary.main',
+                        width: 38,
+                        height: 38,
+                        border: '2px solid white',
+                        background: 'linear-gradient(45deg, #553d8e 20%, #b69ac1 90%)',
                         transition: 'all 0.2s ease',
                       }}
                     >
@@ -529,34 +550,38 @@ const Navbar = () => {
                 </>
               ) : (
                 <>
-                  <motion.div whileHover={{ scale: 1.03 }}>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button
                       color="primary"
                       variant="outlined"
                       onClick={() => navigate('/login')}
                       sx={{
                         ...buttonStyle,
-                        borderColor: alpha('#553d8e', 0.5),
+                        borderWidth: 2,
+                        borderColor: alpha('#553d8e', 0.6),
                         '&:hover': {
                           borderColor: 'primary.main',
-                          backgroundColor: alpha('#553d8e', 0.04)
+                          backgroundColor: alpha('#553d8e', 0.04),
+                          transform: 'translateY(-2px)'
                         }
                       }}
                     >
                       Login
                     </Button>
                   </motion.div>
-                  <motion.div whileHover={{ scale: 1.03, y: -2 }}>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button
                       color="primary"
                       variant="contained"
                       onClick={() => navigate('/signup')}
                       sx={{
                         ...buttonStyle,
-                        background: 'linear-gradient(45deg, #553d8e 10%, #9575cd 90%)',
-                        boxShadow: '0 2px 10px rgba(149, 117, 205, 0.3)',
+                        background: 'linear-gradient(45deg, #553d8e 20%, #b69ac1 90%)',
+                        border: 'none',
+                        boxShadow: '0 4px 12px rgba(149, 117, 205, 0.3)',
                         '&:hover': {
-                          boxShadow: '0 4px 15px rgba(149, 117, 205, 0.4)'
+                          boxShadow: '0 6px 16px rgba(149, 117, 205, 0.5)',
+                          transform: 'translateY(-2px)'
                         }
                       }}
                     >
@@ -572,10 +597,16 @@ const Navbar = () => {
               size="large"
               edge="end"
               onClick={handleMobileMenuOpen}
-              color="primary"
               sx={{
                 display: { md: 'none' },
-                ml: 1
+                ml: 1,
+                color: 'primary.main',
+                background: alpha('#f5f5f5', 0.6),
+                borderRadius: '12px',
+                padding: '8px',
+                '&:hover': {
+                  background: alpha('#f0f0f0', 0.9),
+                }
               }}
             >
               <MenuIcon />
