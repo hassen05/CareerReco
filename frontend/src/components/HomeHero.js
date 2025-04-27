@@ -109,7 +109,7 @@ const HomeHero = () => {
                 border: '1px solid rgba(255,255,255,0.2)'
               }}>
                 <Typography variant="h5" sx={{ mb: 2, color: 'white' }}>
-                  Why Choose ResumeRec?
+                  Why Choose QuirkHire?
                 </Typography>
                 <Box component="ul" sx={{ 
                   pl: 2,

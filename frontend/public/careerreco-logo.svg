@@ -1,34 +1,7 @@
-<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="mainGradient" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#6C63FF"/>
-      <stop offset="100%" stop-color="#B983FF"/>
-    </linearGradient>
-  </defs>
-  <rect x="20" y="40" width="80" height="50" rx="12" fill="url(#mainGradient)" stroke="#4B3F72" stroke-width="3"/>
-  <rect x="40" y="30" width="40" height="18" rx="6" fill="#fff" stroke="#6C63FF" stroke-width="2"/>
-  <circle cx="60" cy="65" r="8" fill="#fff" stroke="#6C63FF" stroke-width="2"/>
-  <circle cx="60" cy="65" r="3" fill="url(#mainGradient)" />
-  <text x="60" y="105" text-anchor="middle" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#4B3F72" font-weight="bold">CareerReco</text>
-  <defs>
-    <linearGradient id="bgGradient" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#C6E6FB"/>
-      <stop offset="100%" stop-color="#7A5FF1"/>
-    </linearGradient>
-    <linearGradient id="waveGradient" x1="0" y1="100" x2="160" y2="60" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#6C63FF"/>
-      <stop offset="1" stop-color="#40C9FF"/>
-    </linearGradient>
-  </defs>
-  <!-- Background -->
-  <rect width="160" height="160" fill="url(#bgGradient)"/>
-  <!-- Abstract wave with nodes -->
-  <path d="M0 120 Q40 100 80 120 T160 110" fill="none" stroke="url(#waveGradient)" stroke-width="4"/>
-  <circle cx="0" cy="120" r="4" fill="#fff" stroke="#6C63FF" stroke-width="2"/>
-  <circle cx="40" cy="100" r="4" fill="#fff" stroke="#6C63FF" stroke-width="2"/>
-  <circle cx="80" cy="120" r="4" fill="#fff" stroke="#6C63FF" stroke-width="2"/>
-  <circle cx="120" cy="115" r="4" fill="#fff" stroke="#6C63FF" stroke-width="2"/>
-  <circle cx="160" cy="110" r="4" fill="#fff" stroke="#6C63FF" stroke-width="2"/>
-  <!-- Project Name -->
-  <text x="80" y="50" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif" fill="#4B3F72" font-weight="bold">CareerReco</text>
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="60" cy="60" r="54" fill="#b69ac1" stroke="#553d8e" stroke-width="6"/>
+  <path d="M60 36a24 24 0 1 1-17 7" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <circle cx="60" cy="60" r="13" fill="#c7dde7" stroke="#9ba2c2" stroke-width="3"/>
+  <path d="M72 78l12 12" stroke="#553d8e" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="60" cy="60" r="50" fill="none" stroke="#fff" stroke-width="2" opacity="0.25"/>
 </svg>
