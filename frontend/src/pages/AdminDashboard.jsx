@@ -1,14 +1,12 @@
 // src/pages/AdminDashboard.jsx
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Typography,
-  Button,
-  TextField,
-  Select,
-  MenuItem,
   Box,
   Grid,
+  Button,
   Table,
   TableHead,
   TableRow,
@@ -20,31 +18,33 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
+  Select,
+  MenuItem,
   Card,
   CardContent,
+  Avatar,
+  useTheme,
+  alpha,
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
 
-// Import chart components and register Chart.js modules
-import { Bar, Pie, Line } from "react-chartjs-2";
+import { Bar, Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
-  ArcElement,
   PointElement,
   LineElement,
   Title,
   Tooltip,
   Legend,
 } from "chart.js";
-
 ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
-  ArcElement,
   PointElement,
   LineElement,
   Title,
@@ -52,278 +52,339 @@ ChartJS.register(
   Legend
 );
 
-const AdminDashboard = () => {
+export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const theme = useTheme();
+
+  // ─── State ─────────────────────────────────────────
   const [profiles, setProfiles] = useState([]);
+  const [recProfiles, setRecProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editProfileId, setEditProfileId] = useState(null);
-  const [deleteProfileId, setDeleteProfileId] = useState(null);
-  const [openCreateModal, setOpenCreateModal] = useState(false);
-  const [alert, setAlert] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
-  const [formData, setFormData] = useState({
+  const [alert, setAlert] = useState({ open: false, msg: "", sev: "success" });
+
+  // Combined modal state
+  const [openModal, setOpenModal] = useState(false);
+  // editing: { type: "User"|"Recruiter", id: string } or null
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({
+    type: "User",
+    id: "",
+    email: "",
+    password: "",
     first_name: "",
     last_name: "",
-    email: "",
     role: "candidate",
-    source: "profiles",
+    phone: "",
+    address: "",
+    company: "",
+    profile_picture: "",
+    description: "",
+    bio: "",
+    website: "",
+    linkedin: "",
+    github: "",
+    twitter: "",
   });
+  const [avatarFile, setAvatarFile] = useState(null);
 
-  const fetchProfiles = async () => {
-    setLoading(true);
-    try {
-      // Run both queries in parallel to fetch profiles and recruiter profiles
-      const [{ data: profilesData, error: profilesError }, { data: recruitersData, error: recruitersError }] = await Promise.all([
-        supabase.from("profiles").select("*"),  // Fetch all profiles
-        supabase.from("recruiter_profiles").select("*"),  // Fetch all recruiter profiles
-      ]);
-
-      if (profilesError || recruitersError) {
-        console.error("Error fetching profiles:", profilesError || recruitersError);
-        setAlert({
-          open: true,
-          message: "Error fetching profiles",
-          severity: "error",
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Add a source property to identify which table the record came from
-      const candidateProfiles = (profilesData || []).map((p) => ({
-        ...p,
-        source: "profiles",
-      }));
-      const normalizedRecruiters = (recruitersData || []).map((r) => ({
-        id: r.id,
-        first_name: r.first_name || "Recruiter",
-        last_name: r.last_name || "",
-        email: r.email || "",
-        profile_picture: r.profile_picture || "",
-        role: "recruiter",
-        created_at: r.created_at || new Date().toISOString(),
-        source: "recruiter_profiles",
-      }));
-
-      const combinedProfiles = [...candidateProfiles, ...normalizedRecruiters];
-      combinedProfiles.sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at)
-      );
-
-      setProfiles(combinedProfiles);
-    } catch (error) {
-      console.error("Unexpected error:", error);
-      setAlert({
-        open: true,
-        message: "Unexpected error occurred",
-        severity: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // ─── Admin Guard + Initial Fetch ──────────────────
   useEffect(() => {
-    fetchProfiles();
-  }, []);
+    (async () => {
+      const {
+        data: { session },
+        error: sessErr,
+      } = await supabase.auth.getSession();
+      if (sessErr || !session) return navigate("/login");
 
-  // --- FORM HANDLERS ---
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+      const { data: me, error: meErr } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+      if (meErr || me.role !== "admin") return navigate("/");
 
-  // Create new profile based on selected role.
-  const handleCreate = async () => {
-    if (formData.role === "candidate") {
-      const { error } = await supabase.from("profiles").insert([formData]);
-      if (error) {
-        console.error("Error creating candidate profile:", error);
-        setAlert({
-          open: true,
-          message: "Error creating profile",
-          severity: "error",
-        });
-        return;
-      }
-    } else if (formData.role === "recruiter") {
-      const recruiterData = {
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        email: formData.email,
-        profile_picture: formData.profile_picture || "",
-        role: "recruiter",
-      };
-      const { error } = await supabase.from("recruiter_profiles").insert([recruiterData]);
-      if (error) {
-        console.error("Error creating recruiter profile:", error);
-        setAlert({
-          open: true,
-          message: "Error creating profile",
-          severity: "error",
-        });
-        return;
-      }
-    }
-    setAlert({
-      open: true,
-      message: "Profile created successfully",
-      severity: "success",
-    });
-    setFormData({ first_name: "", last_name: "", email: "", role: "candidate", source: "profiles" });
-    setOpenCreateModal(false);
-    fetchProfiles();
-  };
+      await fetchAll();
+    })();
+  }, [navigate]);
 
-  // Load a profile for editing.
-  const handleEdit = (profile) => {
-    setEditProfileId(profile.id);
-    setFormData({
-      first_name: profile.first_name,
-      last_name: profile.last_name,
-      email: profile.email,
-      role: profile.role,
-      source: profile.source,
-    });
-  };
+  // fetch both tables
+  async function fetchAll() {
+    setLoading(true);
+    await Promise.all([fetchProfiles(), fetchRecProfiles()]);
+    setLoading(false);
+  }
 
-  // Update the record without moving it between tables.
-  const handleUpdate = async () => {
-    if (formData.source === "profiles") {
-      const { error } = await supabase.from("profiles").update(formData).match({ id: editProfileId });
-      if (error) {
-        console.error("Error updating candidate profile:", error);
-        setAlert({ open: true, message: "Error updating profile", severity: "error" });
-        return;
-      }
-    } else if (formData.source === "recruiter_profiles") {
-      const updateData = {
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        email: formData.email,
-        profile_picture: formData.profile_picture || "",
-      };
-      const { error } = await supabase.from("recruiter_profiles").update(updateData).match({ id: editProfileId });
-      if (error) {
-        console.error("Error updating recruiter profile:", error);
-        setAlert({ open: true, message: "Error updating profile", severity: "error" });
-        return;
-      }
-    }
-    setAlert({ open: true, message: "Profile updated successfully", severity: "success" });
-    setEditProfileId(null);
-    setFormData({ first_name: "", last_name: "", email: "", role: "candidate", source: "profiles" });
-    fetchProfiles();
-  };
-
-  // Delete the record from its original table.
-  const handleDeleteConfirm = async () => {
-    let error;
-    if (formData.source === "profiles") {
-      ({ error } = await supabase.from("profiles").delete().match({ id: deleteProfileId }));
-    } else if (formData.source === "recruiter_profiles") {
-      ({ error } = await supabase.from("recruiter_profiles").delete().match({ id: deleteProfileId }));
-    }
+  async function fetchProfiles() {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select(
+        "id, first_name, last_name, email, role, profile_picture, created_at"
+      );
     if (error) {
-      console.error("Error deleting profile:", error);
-      setAlert({ open: true, message: "Error deleting profile", severity: "error" });
+      setAlert({ open: true, msg: error.message, sev: "error" });
     } else {
-      setAlert({ open: true, message: "Profile deleted successfully", severity: "success" });
+      setProfiles(data);
     }
-    fetchProfiles();
-  };
+  }
 
-  // --- CHART DATA & COMPUTATIONS ---
-  const totalProfiles = profiles.length;
-  const roleCounts = useMemo(() => {
-    const counts = { candidate: 0, recruiter: 0, admin: 0 };
-    profiles.forEach((profile) => {
-      const role = profile.role ? profile.role.toLowerCase() : "unknown";
-      counts[role] = (counts[role] || 0) + 1;
+  async function fetchRecProfiles() {
+    const { data, error } = await supabase
+      .from("recruiter_profiles")
+      .select(
+        "id, email, company, profile_picture, description, phone, website, linkedin, twitter, created_at"
+      )
+      .order("created_at", { ascending: false });
+    if (error) {
+      setAlert({ open: true, msg: error.message, sev: "error" });
+    } else {
+      setRecProfiles(data);
+    }
+  }
+
+  // ─── Helpers ─────────────────────────────────────
+  // replace your old getAvatarUrl with this:
+  function getAvatarUrl(pic) {
+    if (!pic) return "https://via.placeholder.com/40";
+    // if someone pasted a full URL, just use it
+    if (pic.startsWith("http")) return pic;
+    // otherwise build it yourself:
+    return `https://vnylejypvgatgsvomjsk.supabase.co/storage/v1/object/public/avatars/${pic}`;
+  }
+
+  // ─── Modal Openers ─────────────────────────────────
+  function openCreate(type) {
+    setEditing(null);
+    setForm({
+      type,
+      id: "",
+      email: "",
+      password: "",
+      first_name: "",
+      last_name: "",
+      role: type === "Recruiter" ? "recruiter" : "candidate",
+      phone: "",
+      address: "",
+      company: "",
+      profile_picture: "",
+      description: "",
+      bio: "",
+      website: "",
+      linkedin: "",
+      github: "",
+      twitter: "",
     });
-    return counts;
+    setAvatarFile(null);
+    setOpenModal(true);
+  }
+
+  function openEdit(item, type) {
+    setEditing({ type, id: item.id });
+    setForm({ ...item, type, password: "" });
+    setAvatarFile(null);
+    setOpenModal(true);
+  }
+
+  // ─── Form Handlers ─────────────────────────────────
+  const handleChange = (e) =>
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const handleFile = (e) => setAvatarFile(e.target.files?.[0] || null);
+
+  // ─── Save (Create/Update) ──────────────────────────
+  async function handleSave() {
+    let picPath = form.profile_picture;
+    if (avatarFile) {
+      const filename = `${Date.now()}_${avatarFile.name}`;
+      const { error: upErr } = await supabase.storage
+        .from("avatars")
+        .upload(filename, avatarFile, { upsert: true });
+      if (upErr)
+        return setAlert({ open: true, msg: upErr.message, sev: "error" });
+      picPath = filename;
+    }
+
+    if (!editing) {
+      // CREATE
+      if (form.type === "User") {
+        const { data: authData, error: signErr } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+        });
+        if (signErr)
+          return setAlert({ open: true, msg: signErr.message, sev: "error" });
+
+        const { error: insErr } = await supabase.from("profiles").insert([
+          {
+            id: authData.user.id,
+            email: form.email,
+            first_name: form.first_name,
+            last_name: form.last_name,
+            role: form.role,
+            phone: form.phone,
+            address: form.address,
+            profile_picture: picPath,
+            bio: form.bio,
+            website: form.website,
+            linkedin: form.linkedin,
+            github: form.github,
+            twitter: form.twitter,
+          },
+        ]);
+        if (insErr)
+          return setAlert({ open: true, msg: insErr.message, sev: "error" });
+        setAlert({ open: true, msg: "User created", sev: "success" });
+      } else {
+        const { error: rErr } = await supabase
+          .from("recruiter_profiles")
+          .insert([
+            {
+              email: form.email,
+              company: form.company,
+              profile_picture: picPath,
+              description: form.description,
+              phone: form.phone,
+              website: form.website,
+              linkedin: form.linkedin,
+              twitter: form.twitter,
+            },
+          ]);
+        if (rErr)
+          return setAlert({ open: true, msg: rErr.message, sev: "error" });
+        setAlert({ open: true, msg: "Recruiter created", sev: "success" });
+      }
+    } else {
+      // UPDATE
+      if (form.type === "User") {
+        const updates = {
+          first_name: form.first_name,
+          last_name: form.last_name,
+          role: form.role,
+          phone: form.phone,
+          address: form.address,
+          profile_picture: picPath,
+          bio: form.bio,
+          website: form.website,
+          linkedin: form.linkedin,
+          github: form.github,
+          twitter: form.twitter,
+        };
+        const { error: uErr } = await supabase
+          .from("profiles")
+          .update(updates)
+          .eq("id", editing.id);
+        if (uErr)
+          return setAlert({ open: true, msg: uErr.message, sev: "error" });
+        setAlert({ open: true, msg: "User updated", sev: "success" });
+      } else {
+        const updates = {
+          email: form.email,
+          company: form.company,
+          profile_picture: picPath,
+          description: form.description,
+          phone: form.phone,
+          website: form.website,
+          linkedin: form.linkedin,
+          twitter: form.twitter,
+        };
+        const { error: rErr } = await supabase
+          .from("recruiter_profiles")
+          .update(updates)
+          .eq("id", editing.id);
+        if (rErr)
+          return setAlert({ open: true, msg: rErr.message, sev: "error" });
+        setAlert({ open: true, msg: "Recruiter updated", sev: "success" });
+      }
+    }
+
+    setOpenModal(false);
+    fetchAll();
+  }
+
+  // ─── Delete ────────────────────────────────────────
+  async function handleDelete() {
+    if (!editing) return;
+    if (editing.type === "User") {
+      const { error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", editing.id);
+      if (error)
+        return setAlert({ open: true, msg: error.message, sev: "error" });
+      setAlert({ open: true, msg: "User deleted", sev: "success" });
+    } else {
+      const { error } = await supabase
+        .from("recruiter_profiles")
+        .delete()
+        .eq("id", editing.id);
+      if (error)
+        return setAlert({ open: true, msg: error.message, sev: "error" });
+      setAlert({ open: true, msg: "Recruiter deleted", sev: "success" });
+    }
+    setOpenModal(false);
+    fetchAll();
+  }
+
+  // ─── Charts Data ───────────────────────────────────
+  const roleCounts = useMemo(() => {
+    const c = { candidate: 0, recruiter: 0, admin: 0 };
+    profiles.forEach((u) => {
+      const r = (u.role || "candidate").toLowerCase();
+      if (c[r] !== undefined) c[r]++;
+    });
+    return c;
   }, [profiles]);
 
+  const roles = Object.keys(roleCounts);
+  const solid = [
+    theme.palette.primary.main,
+    theme.palette.warning.main,
+    theme.palette.secondary.main,
+  ];
+  const translucent = solid.map((c) => alpha(c, 0.6));
+
   const barData = {
-    labels: Object.keys(roleCounts),
+    labels: roles.map((r) => r.charAt(0).toUpperCase() + r.slice(1)),
     datasets: [
       {
-        label: "Number of Profiles",
-        data: Object.values(roleCounts),
-        backgroundColor: [
-          "rgba(75,192,192,0.6)",
-          "rgba(255,206,86,0.6)",
-          "rgba(153,102,255,0.6)",
-        ],
-        borderColor: [
-          "rgba(75,192,192,1)",
-          "rgba(255,206,86,1)",
-          "rgba(153,102,255,1)",
-        ],
+        label: "Profiles by Role",
+        data: roles.map((r) => roleCounts[r]),
+        backgroundColor: translucent,
+        borderColor: solid,
         borderWidth: 1,
       },
     ],
   };
 
-  const pieData = {
-    labels: Object.keys(roleCounts),
-    datasets: [
-      {
-        label: "Profiles Distribution",
-        data: Object.values(roleCounts),
-        backgroundColor: [
-          "rgba(75,192,192,0.6)",
-          "rgba(255,206,86,0.6)",
-          "rgba(153,102,255,0.6)",
-        ],
-        borderColor: [
-          "rgba(75,192,192,1)",
-          "rgba(255,206,86,1)",
-          "rgba(153,102,255,1)",
-        ],
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const dateCounts = useMemo(() => {
-    const counts = {};
-    profiles.forEach((profile) => {
-      if (profile.created_at) {
-        const date = new Date(profile.created_at).toLocaleDateString();
-        counts[date] = (counts[date] || 0) + 1;
-      }
+  const dateMap = useMemo(() => {
+    const m = {};
+    profiles.forEach(({ created_at, role }) => {
+      const d = new Date(created_at).toLocaleDateString();
+      const r = (role || "candidate").toLowerCase();
+      if (!m[d]) m[d] = { candidate: 0, recruiter: 0, admin: 0 };
+      m[d][r]++;
     });
-    const sortedDates = Object.keys(counts).sort(
-      (a, b) => new Date(a) - new Date(b)
-    );
-    const sortedCounts = sortedDates.map((date) => counts[date]);
-    return { labels: sortedDates, data: sortedCounts };
+    const dates = Object.keys(m).sort((a, b) => new Date(a) - new Date(b));
+    return { dates, m };
   }, [profiles]);
 
   const lineData = {
-    labels: dateCounts.labels,
-    datasets: [
-      {
-        label: "Profiles Created Over Time",
-        data: dateCounts.data,
-        fill: false,
-        tension: 0.2,
-        borderColor: "rgba(255,99,132,1)",
-        backgroundColor: "rgba(255,99,132,0.2)",
-      },
-    ],
+    labels: dateMap.dates,
+    datasets: roles.map((r, i) => ({
+      label: r.charAt(0).toUpperCase() + r.slice(1),
+      data: dateMap.dates.map((d) => dateMap.m[d][r]),
+      fill: false,
+      tension: 0.3,
+      borderColor: solid[i],
+      backgroundColor: translucent[i],
+    })),
   };
 
-  const chartContainerStyle = {
-    p: 2,
-    backgroundColor: "#f4f4f4",
-    borderRadius: 1,
-  };
+  const chartBox = { p: 2, bgcolor: theme.palette.grey[100], borderRadius: 2 };
+
+  // ─── Combined Table ───────────────────────────────
+  const combined = [
+    ...profiles.map((u) => ({ type: "User", ...u })),
+    ...recProfiles.map((r) => ({ type: "Recruiter", ...r })),
+  ];
 
   return (
     <Container sx={{ my: 4 }}>
@@ -331,166 +392,101 @@ const AdminDashboard = () => {
         Admin Dashboard
       </Typography>
 
-      {/* INFO CARDS SECTION */}
-      <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ textAlign: "center", p: 1 }}>
-            <CardContent>
-              <Typography variant="h6">Total Profiles</Typography>
-              <Typography variant="h4">{totalProfiles}</Typography>
-            </CardContent>
-          </Card>
+      {/* Info Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {[
+          ["Total Users", profiles.length],
+          ["Candidates", roleCounts.candidate],
+          ["Admins", roleCounts.admin],
+          ["Recruiters", recProfiles.length],
+        ].map(([title, val]) => (
+          <Grid item xs={12} sm={6} md={3} key={title}>
+            <Card elevation={3} sx={{ textAlign: "center", py: 2 }}>
+              <CardContent>
+                <Typography variant="subtitle1">{title}</Typography>
+                <Typography variant="h3">{val}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Charts */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={6}>
+          <Box sx={chartBox}>
+            <Typography variant="h6">Profiles by Role</Typography>
+            <Box sx={{ height: 300 }}>
+              <Bar data={barData} options={{ maintainAspectRatio: false }} />
+            </Box>
+          </Box>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ textAlign: "center", p: 1 }}>
-            <CardContent>
-              <Typography variant="h6">Candidates</Typography>
-              <Typography variant="h4">{roleCounts.candidate}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ textAlign: "center", p: 1 }}>
-            <CardContent>
-              <Typography variant="h6">Recruiters</Typography>
-              <Typography variant="h4">{roleCounts.recruiter}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ textAlign: "center", p: 1 }}>
-            <CardContent>
-              <Typography variant="h6">Admins</Typography>
-              <Typography variant="h4">{roleCounts.admin}</Typography>
-            </CardContent>
-          </Card>
+        <Grid item xs={12} md={6}>
+          <Box sx={chartBox}>
+            <Typography variant="h6">Profile Creation Trend</Typography>
+            <Box sx={{ height: 300 }}>
+              <Line data={lineData} options={{ maintainAspectRatio: false }} />
+            </Box>
+          </Box>
         </Grid>
       </Grid>
 
-      {/* CHARTS SECTION */}
-      <Box sx={{ my: 4 }}>
-        <Grid container spacing={2}>
-          {/* Bar Chart */}
-          <Grid item xs={12} md={4}>
-            <Box sx={chartContainerStyle}>
-              <Typography variant="h6" gutterBottom>
-                Profiles by Role
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Distribution of profiles across roles.
-              </Typography>
-              <Box sx={{ height: 300 }}>
-                <Bar data={barData} options={{ maintainAspectRatio: false, responsive: true }} />
-              </Box>
-            </Box>
-          </Grid>
-          {/* Pie Chart */}
-          <Grid item xs={12} md={4}>
-            <Box sx={chartContainerStyle}>
-              <Typography variant="h6" gutterBottom>
-                Profiles Distribution
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Proportional distribution of user roles.
-              </Typography>
-              <Box sx={{ height: 300 }}>
-                <Pie data={pieData} options={{ maintainAspectRatio: false, responsive: true }} />
-              </Box>
-            </Box>
-          </Grid>
-          {/* Line Chart */}
-          <Grid item xs={12} md={4}>
-            <Box sx={chartContainerStyle}>
-              <Typography variant="h6" gutterBottom>
-                Profile Creation Trend
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Profiles created over time.
-              </Typography>
-              <Box sx={{ height: 300 }}>
-                <Line data={lineData} options={{ maintainAspectRatio: false, responsive: true }} />
-              </Box>
-            </Box>
-          </Grid>
-        </Grid>
-      </Box>
-
-      {/* PROFILES TABLE SECTION */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 2,
-        }}
-      >
-        <Typography variant="h6">Profiles</Typography>
-        <Button
-          variant="contained"
-          onClick={() => {
-            setFormData({
-              first_name: "",
-              last_name: "",
-              email: "",
-              role: "candidate",
-              source: "profiles",
-            });
-            setOpenCreateModal(true);
-          }}
-        >
-          New Profile
+      {/* Action Buttons */}
+      <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+        <Button variant="contained" onClick={() => openCreate("User")}>
+          New User
+        </Button>
+        <Button variant="contained" onClick={() => openCreate("Recruiter")}>
+          New Recruiter
         </Button>
       </Box>
+
+      {/* Combined Table */}
       {loading ? (
-        <Typography>Loading profiles...</Typography>
+        <Typography>Loading…</Typography>
       ) : (
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Picture</TableCell>
-              <TableCell>First Name</TableCell>
-              <TableCell>Last Name</TableCell>
-              <TableCell>Email</TableCell>
+              <TableCell>Type</TableCell>
               <TableCell>Role</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell>Avatar</TableCell>
+              <TableCell>First</TableCell>
+              <TableCell>Last</TableCell>
+              <TableCell>Company</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Created</TableCell>
+              <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {profiles.map((profile) => (
-              <TableRow key={profile.id}>
-                <TableCell>
-                  <img
-                    src={
-                      profile.profile_picture ||
-                      "https://via.placeholder.com/50"
-                    }
-                    alt={`${profile.first_name} ${profile.last_name}`}
-                    style={{
-                      width: "50px",
-                      height: "50px",
-                      borderRadius: "50%",
-                    }}
-                  />
+            {combined.map((row) => (
+              <TableRow key={`${row.type}-${row.id}`}>
+                <TableCell>{row.type}</TableCell>
+                <TableCell sx={{ textTransform: "capitalize" }}>
+                  {row.role || (row.type === "Recruiter" ? "recruiter" : "")}
                 </TableCell>
-                <TableCell>{profile.first_name}</TableCell>
-                <TableCell>{profile.last_name}</TableCell>
-                <TableCell>{profile.email}</TableCell>
-                <TableCell>{profile.role}</TableCell>
                 <TableCell>
-                  <Button
-                    variant="outlined"
-                    sx={{ mr: 1 }}
-                    onClick={() => handleEdit(profile)}
-                  >
+                  <Avatar src={getAvatarUrl(row.profile_picture)}>
+                    {!row.profile_picture &&
+                      (row.first_name?.[0] || row.company?.[0] || "?")}
+                  </Avatar>
+                </TableCell>
+                <TableCell>{row.first_name}</TableCell>
+                <TableCell>{row.last_name}</TableCell>
+                <TableCell>{row.company}</TableCell>
+                <TableCell>{row.email}</TableCell>
+                <TableCell>
+                  {new Date(row.created_at).toLocaleDateString()}
+                </TableCell>
+                <TableCell align="right">
+                  <Button size="small" onClick={() => openEdit(row, row.type)}>
                     Edit
                   </Button>
                   <Button
-                    variant="outlined"
+                    size="small"
                     color="error"
-                    onClick={() => {
-                      setDeleteProfileId(profile.id);
-                      setFormData((prev) => ({ ...prev, source: profile.source }));
-                    }}
+                    onClick={() => openEdit(row, row.type)}
                   >
                     Delete
                   </Button>
@@ -501,113 +497,160 @@ const AdminDashboard = () => {
         </Table>
       )}
 
-      {/* CREATE PROFILE MODAL */}
-      <Dialog open={openCreateModal} onClose={() => setOpenCreateModal(false)}>
-        <DialogTitle>Create Profile</DialogTitle>
+      {/* Create/Edit/Delete Modal */}
+      <Dialog
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {(editing ? "Edit" : "Create") + " " + form.type}
+        </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-            <TextField
-              label="First Name"
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleChange}
-            />
-            <TextField
-              label="Last Name"
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleChange}
-            />
+          <Box
+            component="form"
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 2,
+              mt: 1,
+            }}
+          >
+            {/* Common fields */}
             <TextField
               label="Email"
               name="email"
-              value={formData.email}
+              value={form.email}
               onChange={handleChange}
+              fullWidth
             />
-            <Select label="Role" name="role" value={formData.role} onChange={handleChange}>
-              <MenuItem value="candidate">Candidate</MenuItem>
-              <MenuItem value="recruiter">Recruiter</MenuItem>
-              <MenuItem value="admin">Admin</MenuItem>
-            </Select>
+            {form.type === "User" && !editing && (
+              <TextField
+                label="Password"
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                fullWidth
+              />
+            )}
+            {form.type === "User" && (
+              <>
+                <TextField
+                  label="First Name"
+                  name="first_name"
+                  value={form.first_name}
+                  onChange={handleChange}
+                  fullWidth
+                />
+                <TextField
+                  label="Last Name"
+                  name="last_name"
+                  value={form.last_name}
+                  onChange={handleChange}
+                  fullWidth
+                />
+                <Select
+                  name="role"
+                  value={form.role}
+                  onChange={handleChange}
+                  fullWidth
+                >
+                  {["candidate", "recruiter", "admin"].map((r) => (
+                    <MenuItem key={r} value={r}>
+                      {r.charAt(0).toUpperCase() + r.slice(1)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </>
+            )}
+            {form.type === "Recruiter" && (
+              <TextField
+                label="Company"
+                name="company"
+                value={form.company}
+                onChange={handleChange}
+                fullWidth
+              />
+            )}
+            {/* Shared */}
+            <TextField
+              label="Phone"
+              name="phone"
+              value={form.phone}
+              onChange={handleChange}
+              fullWidth
+            />
+            <TextField
+              label="Website"
+              name="website"
+              value={form.website}
+              onChange={handleChange}
+              fullWidth
+            />
+            <TextField
+              label="LinkedIn"
+              name="linkedin"
+              value={form.linkedin}
+              onChange={handleChange}
+              fullWidth
+            />
+            <TextField
+              label="Twitter"
+              name="twitter"
+              value={form.twitter}
+              onChange={handleChange}
+              fullWidth
+            />
+            {/* Avatar */}
+            <TextField
+              label="Avatar URL"
+              name="profile_picture"
+              value={form.profile_picture}
+              onChange={handleChange}
+              fullWidth
+            />
+            <Button variant="outlined" component="label">
+              Upload Avatar
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={handleFile}
+              />
+            </Button>
+            {avatarFile && <Typography>{avatarFile.name}</Typography>}
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenCreateModal(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate}>
-            Create Profile
+          <Button onClick={() => setOpenModal(false)}>Cancel</Button>
+          {editing && (
+            <Button color="error" onClick={handleDelete}>
+              Delete
+            </Button>
+          )}
+          <Button variant="contained" onClick={handleSave}>
+            {editing ? "Update" : "Create"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* EDIT PROFILE MODAL */}
-      <Dialog open={Boolean(editProfileId)} onClose={() => setEditProfileId(null)}>
-        <DialogTitle>Edit Profile</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-            <TextField
-              label="First Name"
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleChange}
-            />
-            <TextField
-              label="Last Name"
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleChange}
-            />
-            <TextField
-              label="Email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-            />
-            <Select label="Role" name="role" value={formData.role} onChange={handleChange} disabled>
-              <MenuItem value="candidate">Candidate</MenuItem>
-              <MenuItem value="recruiter">Recruiter</MenuItem>
-              <MenuItem value="admin">Admin</MenuItem>
-            </Select>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditProfileId(null)}>Cancel</Button>
-          <Button variant="contained" onClick={handleUpdate}>
-            Update Profile
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* SNACKBAR ALERT */}
+      {/* Snackbar */}
       <Snackbar
         open={alert.open}
         autoHideDuration={3000}
-        onClose={() => setAlert({ ...alert, open: false })}
+        onClose={() => setAlert((a) => ({ ...a, open: false }))}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
-          onClose={() => setAlert({ ...alert, open: false })}
-          severity={alert.severity}
+          onClose={() => setAlert((a) => ({ ...a, open: false }))}
+          severity={alert.sev}
           sx={{ width: "100%" }}
         >
-          {alert.message}
+          {alert.msg}
         </Alert>
       </Snackbar>
-
-      {/* DELETE CONFIRMATION DIALOG */}
-      <Dialog open={Boolean(deleteProfileId)} onClose={() => setDeleteProfileId(null)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete this profile?
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteProfileId(null)}>Cancel</Button>
-          <Button color="error" onClick={handleDeleteConfirm}>
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
-};
-
-export default AdminDashboard;
+}
