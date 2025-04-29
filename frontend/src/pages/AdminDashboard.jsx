@@ -62,9 +62,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState({ open: false, msg: "", sev: "success" });
 
-  // Combined modal state
   const [openModal, setOpenModal] = useState(false);
-  // editing: { type: "User"|"Recruiter", id: string } or null
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
     type: "User",
@@ -141,17 +139,14 @@ export default function AdminDashboard() {
     }
   }
 
-  // ─── Helpers ─────────────────────────────────────
-  // replace your old getAvatarUrl with this:
+  // helper for avatar URLs
   function getAvatarUrl(pic) {
     if (!pic) return "https://via.placeholder.com/40";
-    // if someone pasted a full URL, just use it
     if (pic.startsWith("http")) return pic;
-    // otherwise build it yourself:
     return `https://vnylejypvgatgsvomjsk.supabase.co/storage/v1/object/public/avatars/${pic}`;
   }
 
-  // ─── Modal Openers ─────────────────────────────────
+  // Modal openers
   function openCreate(type) {
     setEditing(null);
     setForm({
@@ -184,12 +179,12 @@ export default function AdminDashboard() {
     setOpenModal(true);
   }
 
-  // ─── Form Handlers ─────────────────────────────────
+  // Form handlers
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   const handleFile = (e) => setAvatarFile(e.target.files?.[0] || null);
 
-  // ─── Save (Create/Update) ──────────────────────────
+  // Save (create/update)
   async function handleSave() {
     let picPath = form.profile_picture;
     if (avatarFile) {
@@ -299,7 +294,7 @@ export default function AdminDashboard() {
     fetchAll();
   }
 
-  // ─── Delete ────────────────────────────────────────
+  // Delete
   async function handleDelete() {
     if (!editing) return;
     if (editing.type === "User") {
@@ -325,15 +320,17 @@ export default function AdminDashboard() {
 
   // ─── Charts Data ───────────────────────────────────
   const roleCounts = useMemo(() => {
-    const c = { candidate: 0, recruiter: 0, admin: 0 };
-    profiles.forEach((u) => {
-      const r = (u.role || "candidate").toLowerCase();
-      if (c[r] !== undefined) c[r]++;
-    });
-    return c;
-  }, [profiles]);
+    const candidate = profiles.filter(
+      (u) => (u.role || "candidate").toLowerCase() === "candidate"
+    ).length;
+    const admin = profiles.filter(
+      (u) => (u.role || "candidate").toLowerCase() === "admin"
+    ).length;
+    const recruiter = recProfiles.length;
+    return { candidate, admin, recruiter };
+  }, [profiles, recProfiles]);
 
-  const roles = Object.keys(roleCounts);
+  const roles = ["Candidate", "Admin", "Recruiter"];
   const solid = [
     theme.palette.primary.main,
     theme.palette.warning.main,
@@ -342,11 +339,15 @@ export default function AdminDashboard() {
   const translucent = solid.map((c) => alpha(c, 0.6));
 
   const barData = {
-    labels: roles.map((r) => r.charAt(0).toUpperCase() + r.slice(1)),
+    labels: roles,
     datasets: [
       {
         label: "Profiles by Role",
-        data: roles.map((r) => roleCounts[r]),
+        data: [
+          roleCounts.candidate,
+          roleCounts.admin,
+          roleCounts.recruiter,
+        ],
         backgroundColor: translucent,
         borderColor: solid,
         borderWidth: 1,
@@ -355,32 +356,60 @@ export default function AdminDashboard() {
   };
 
   const dateMap = useMemo(() => {
+    const initCounts = { candidate: 0, admin: 0, recruiter: 0 };
     const m = {};
+
     profiles.forEach(({ created_at, role }) => {
       const d = new Date(created_at).toLocaleDateString();
-      const r = (role || "candidate").toLowerCase();
-      if (!m[d]) m[d] = { candidate: 0, recruiter: 0, admin: 0 };
-      m[d][r]++;
+      if (!m[d]) m[d] = { ...initCounts };
+      const key = (role || "candidate").toLowerCase();
+      if (key === "candidate" || key === "admin") {
+        m[d][key]++;
+      }
     });
+
+    recProfiles.forEach(({ created_at }) => {
+      const d = new Date(created_at).toLocaleDateString();
+      if (!m[d]) m[d] = { ...initCounts };
+      m[d].recruiter++;
+    });
+
     const dates = Object.keys(m).sort((a, b) => new Date(a) - new Date(b));
     return { dates, m };
-  }, [profiles]);
+  }, [profiles, recProfiles]);
 
   const lineData = {
     labels: dateMap.dates,
-    datasets: roles.map((r, i) => ({
-      label: r.charAt(0).toUpperCase() + r.slice(1),
-      data: dateMap.dates.map((d) => dateMap.m[d][r]),
-      fill: false,
-      tension: 0.3,
-      borderColor: solid[i],
-      backgroundColor: translucent[i],
-    })),
+    datasets: [
+      {
+        label: "Candidate",
+        data: dateMap.dates.map((d) => dateMap.m[d].candidate),
+        fill: false,
+        tension: 0.3,
+        borderColor: solid[0],
+        backgroundColor: translucent[0],
+      },
+      {
+        label: "Admin",
+        data: dateMap.dates.map((d) => dateMap.m[d].admin),
+        fill: false,
+        tension: 0.3,
+        borderColor: solid[1],
+        backgroundColor: translucent[1],
+      },
+      {
+        label: "Recruiter",
+        data: dateMap.dates.map((d) => dateMap.m[d].recruiter),
+        fill: false,
+        tension: 0.3,
+        borderColor: solid[2],
+        backgroundColor: translucent[2],
+      },
+    ],
   };
 
   const chartBox = { p: 2, bgcolor: theme.palette.grey[100], borderRadius: 2 };
 
-  // ─── Combined Table ───────────────────────────────
   const combined = [
     ...profiles.map((u) => ({ type: "User", ...u })),
     ...recProfiles.map((r) => ({ type: "Recruiter", ...r })),
