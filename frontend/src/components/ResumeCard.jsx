@@ -360,6 +360,18 @@ const ResumeCard = ({ resume }) => {
                 </Stack>
               </Box>
             )}
+            {certifications.length > 0 && (
+              <Box>
+                <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                  🏆 Certifications
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {certifications.map((cert, index) => (
+                    <DetailChip key={index}>{cert}</DetailChip>
+                  ))}
+                </Stack>
+              </Box>
+            )}
           </Stack>
 
           {/* Match reasons section */}

@@ -36,7 +36,18 @@ def get_sentence_transformer():
     global _model
     if _model is None:
         from sentence_transformers import SentenceTransformer
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
+        import torch
+        
+        # Explicitly set device to CPU to avoid meta tensor issues with PyTorch 2.6+
+        device = torch.device('cpu')
+        
+        try:
+            # Initialize model with explicit device to avoid meta tensor error
+            _model = SentenceTransformer("all-MiniLM-L6-v2", device=device)
+        except Exception as e:
+            logger.error(f"Error loading sentence transformer: {e}")
+            # Fall back to default initialization if needed
+            _model = SentenceTransformer("all-MiniLM-L6-v2")
     return _model
 
 # Configuration - Adjust these weights based on importance
