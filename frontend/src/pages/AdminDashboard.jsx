@@ -12,6 +12,7 @@ import {
   TableRow,
   TableCell,
   TableBody,
+  TablePagination,
   Snackbar,
   Alert,
   Dialog,
@@ -26,9 +27,10 @@ import {
   Avatar,
   useTheme,
   alpha,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
-
 import { Bar, Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -41,6 +43,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -62,13 +65,11 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState({ open: false, msg: "", sev: "success" });
 
-  // Combined modal state
+  // modal/form
   const [openModal, setOpenModal] = useState(false);
-  // editing: { type: "User"|"Recruiter", id: string } or null
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
     type: "User",
-    id: "",
     email: "",
     password: "",
     first_name: "",
@@ -86,6 +87,12 @@ export default function AdminDashboard() {
     twitter: "",
   });
   const [avatarFile, setAvatarFile] = useState(null);
+
+  // filtering & pagination
+  const [filterText, setFilterText] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // ─── Admin Guard + Initial Fetch ──────────────────
   useEffect(() => {
@@ -107,7 +114,6 @@ export default function AdminDashboard() {
     })();
   }, [navigate]);
 
-  // fetch both tables
   async function fetchAll() {
     setLoading(true);
     await Promise.all([fetchProfiles(), fetchRecProfiles()]);
@@ -117,14 +123,9 @@ export default function AdminDashboard() {
   async function fetchProfiles() {
     const { data, error } = await supabase
       .from("profiles")
-      .select(
-        "id, first_name, last_name, email, role, profile_picture, created_at"
-      );
-    if (error) {
-      setAlert({ open: true, msg: error.message, sev: "error" });
-    } else {
-      setProfiles(data);
-    }
+      .select("id, first_name, last_name, email, role, profile_picture, created_at");
+    if (error) setAlert({ open: true, msg: error.message, sev: "error" });
+    else setProfiles(data);
   }
 
   async function fetchRecProfiles() {
@@ -134,29 +135,21 @@ export default function AdminDashboard() {
         "id, email, company, profile_picture, description, phone, website, linkedin, twitter, created_at"
       )
       .order("created_at", { ascending: false });
-    if (error) {
-      setAlert({ open: true, msg: error.message, sev: "error" });
-    } else {
-      setRecProfiles(data);
-    }
+    if (error) setAlert({ open: true, msg: error.message, sev: "error" });
+    else setRecProfiles(data);
   }
 
-  // ─── Helpers ─────────────────────────────────────
-  // replace your old getAvatarUrl with this:
+  // ─── Helpers ──────────────────────────────────────
   function getAvatarUrl(pic) {
     if (!pic) return "https://via.placeholder.com/40";
-    // if someone pasted a full URL, just use it
     if (pic.startsWith("http")) return pic;
-    // otherwise build it yourself:
     return `https://vnylejypvgatgsvomjsk.supabase.co/storage/v1/object/public/avatars/${pic}`;
   }
 
-  // ─── Modal Openers ─────────────────────────────────
   function openCreate(type) {
     setEditing(null);
     setForm({
       type,
-      id: "",
       email: "",
       password: "",
       first_name: "",
@@ -179,17 +172,15 @@ export default function AdminDashboard() {
 
   function openEdit(item, type) {
     setEditing({ type, id: item.id });
-    setForm({ ...item, type, password: "" });
+    setForm({ type, ...item, password: "" });
     setAvatarFile(null);
     setOpenModal(true);
   }
 
-  // ─── Form Handlers ─────────────────────────────────
-  const handleChange = (e) =>
+  const handleFormChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   const handleFile = (e) => setAvatarFile(e.target.files?.[0] || null);
 
-  // ─── Save (Create/Update) ──────────────────────────
   async function handleSave() {
     let picPath = form.profile_picture;
     if (avatarFile) {
@@ -215,18 +206,8 @@ export default function AdminDashboard() {
         const { error: insErr } = await supabase.from("profiles").insert([
           {
             id: authData.user.id,
-            email: form.email,
-            first_name: form.first_name,
-            last_name: form.last_name,
-            role: form.role,
-            phone: form.phone,
-            address: form.address,
+            ...form,
             profile_picture: picPath,
-            bio: form.bio,
-            website: form.website,
-            linkedin: form.linkedin,
-            github: form.github,
-            twitter: form.twitter,
           },
         ]);
         if (insErr)
@@ -235,105 +216,56 @@ export default function AdminDashboard() {
       } else {
         const { error: rErr } = await supabase
           .from("recruiter_profiles")
-          .insert([
-            {
-              email: form.email,
-              company: form.company,
-              profile_picture: picPath,
-              description: form.description,
-              phone: form.phone,
-              website: form.website,
-              linkedin: form.linkedin,
-              twitter: form.twitter,
-            },
-          ]);
+          .insert([{ ...form, profile_picture: picPath }]);
         if (rErr)
           return setAlert({ open: true, msg: rErr.message, sev: "error" });
         setAlert({ open: true, msg: "Recruiter created", sev: "success" });
       }
     } else {
       // UPDATE
-      if (form.type === "User") {
-        const updates = {
-          first_name: form.first_name,
-          last_name: form.last_name,
-          role: form.role,
-          phone: form.phone,
-          address: form.address,
-          profile_picture: picPath,
-          bio: form.bio,
-          website: form.website,
-          linkedin: form.linkedin,
-          github: form.github,
-          twitter: form.twitter,
-        };
-        const { error: uErr } = await supabase
-          .from("profiles")
-          .update(updates)
-          .eq("id", editing.id);
-        if (uErr)
-          return setAlert({ open: true, msg: uErr.message, sev: "error" });
-        setAlert({ open: true, msg: "User updated", sev: "success" });
-      } else {
-        const updates = {
-          email: form.email,
-          company: form.company,
-          profile_picture: picPath,
-          description: form.description,
-          phone: form.phone,
-          website: form.website,
-          linkedin: form.linkedin,
-          twitter: form.twitter,
-        };
-        const { error: rErr } = await supabase
-          .from("recruiter_profiles")
-          .update(updates)
-          .eq("id", editing.id);
-        if (rErr)
-          return setAlert({ open: true, msg: rErr.message, sev: "error" });
-        setAlert({ open: true, msg: "Recruiter updated", sev: "success" });
-      }
+      const updates = { ...form, profile_picture: picPath };
+      const table = editing.type === "User" ? "profiles" : "recruiter_profiles";
+      const { error: uErr } = await supabase
+        .from(table)
+        .update(updates)
+        .eq("id", editing.id);
+      if (uErr)
+        return setAlert({ open: true, msg: uErr.message, sev: "error" });
+      setAlert({
+        open: true,
+        msg: `${editing.type} updated`,
+        sev: "success",
+      });
     }
 
     setOpenModal(false);
     fetchAll();
   }
 
-  // ─── Delete ────────────────────────────────────────
   async function handleDelete() {
     if (!editing) return;
-    if (editing.type === "User") {
-      const { error } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", editing.id);
-      if (error)
-        return setAlert({ open: true, msg: error.message, sev: "error" });
-      setAlert({ open: true, msg: "User deleted", sev: "success" });
-    } else {
-      const { error } = await supabase
-        .from("recruiter_profiles")
-        .delete()
-        .eq("id", editing.id);
-      if (error)
-        return setAlert({ open: true, msg: error.message, sev: "error" });
-      setAlert({ open: true, msg: "Recruiter deleted", sev: "success" });
-    }
+    const table = editing.type === "User" ? "profiles" : "recruiter_profiles";
+    const { error } = await supabase.from(table).delete().eq("id", editing.id);
+    if (error)
+      return setAlert({ open: true, msg: error.message, sev: "error" });
+    setAlert({ open: true, msg: `${editing.type} deleted`, sev: "success" });
     setOpenModal(false);
     fetchAll();
   }
 
   // ─── Charts Data ───────────────────────────────────
   const roleCounts = useMemo(() => {
-    const c = { candidate: 0, recruiter: 0, admin: 0 };
-    profiles.forEach((u) => {
-      const r = (u.role || "candidate").toLowerCase();
-      if (c[r] !== undefined) c[r]++;
-    });
-    return c;
-  }, [profiles]);
+    const candidate = profiles.filter(
+      (u) => (u.role || "candidate").toLowerCase() === "candidate"
+    ).length;
+    const admin = profiles.filter(
+      (u) => (u.role || "candidate").toLowerCase() === "admin"
+    ).length;
+    const recruiter = recProfiles.length;
+    return { candidate, admin, recruiter };
+  }, [profiles, recProfiles]);
 
-  const roles = Object.keys(roleCounts);
+  const roles = ["Candidate", "Admin", "Recruiter"];
   const solid = [
     theme.palette.primary.main,
     theme.palette.warning.main,
@@ -342,11 +274,11 @@ export default function AdminDashboard() {
   const translucent = solid.map((c) => alpha(c, 0.6));
 
   const barData = {
-    labels: roles.map((r) => r.charAt(0).toUpperCase() + r.slice(1)),
+    labels: roles,
     datasets: [
       {
         label: "Profiles by Role",
-        data: roles.map((r) => roleCounts[r]),
+        data: [roleCounts.candidate, roleCounts.admin, roleCounts.recruiter],
         backgroundColor: translucent,
         borderColor: solid,
         borderWidth: 1,
@@ -355,56 +287,136 @@ export default function AdminDashboard() {
   };
 
   const dateMap = useMemo(() => {
+    const initCounts = { candidate: 0, admin: 0, recruiter: 0 };
     const m = {};
     profiles.forEach(({ created_at, role }) => {
       const d = new Date(created_at).toLocaleDateString();
-      const r = (role || "candidate").toLowerCase();
-      if (!m[d]) m[d] = { candidate: 0, recruiter: 0, admin: 0 };
-      m[d][r]++;
+      if (!m[d]) m[d] = { ...initCounts };
+      const key = (role || "candidate").toLowerCase();
+      if (key === "candidate" || key === "admin") m[d][key]++;
+    });
+    recProfiles.forEach(({ created_at }) => {
+      const d = new Date(created_at).toLocaleDateString();
+      if (!m[d]) m[d] = { ...initCounts };
+      m[d].recruiter++;
     });
     const dates = Object.keys(m).sort((a, b) => new Date(a) - new Date(b));
     return { dates, m };
-  }, [profiles]);
+  }, [profiles, recProfiles]);
 
   const lineData = {
     labels: dateMap.dates,
-    datasets: roles.map((r, i) => ({
-      label: r.charAt(0).toUpperCase() + r.slice(1),
-      data: dateMap.dates.map((d) => dateMap.m[d][r]),
-      fill: false,
-      tension: 0.3,
-      borderColor: solid[i],
-      backgroundColor: translucent[i],
-    })),
+    datasets: [
+      {
+        label: "Candidate",
+        data: dateMap.dates.map((d) => dateMap.m[d].candidate),
+        fill: false,
+        tension: 0.3,
+        borderColor: solid[0],
+        backgroundColor: translucent[0],
+      },
+      {
+        label: "Admin",
+        data: dateMap.dates.map((d) => dateMap.m[d].admin),
+        fill: false,
+        tension: 0.3,
+        borderColor: solid[1],
+        backgroundColor: translucent[1],
+      },
+      {
+        label: "Recruiter",
+        data: dateMap.dates.map((d) => dateMap.m[d].recruiter),
+        fill: false,
+        tension: 0.3,
+        borderColor: solid[2],
+        backgroundColor: translucent[2],
+      },
+    ],
   };
 
-  const chartBox = { p: 2, bgcolor: theme.palette.grey[100], borderRadius: 2 };
+  const chartBox = {
+    p: 2,
+    bgcolor: theme.palette.grey[50],
+    borderRadius: 2,
+    boxShadow: 1,
+  };
 
-  // ─── Combined Table ───────────────────────────────
-  const combined = [
-    ...profiles.map((u) => ({ type: "User", ...u })),
-    ...recProfiles.map((r) => ({ type: "Recruiter", ...r })),
-  ];
+  // ─── Combine & Filter ─────────────────────────────
+  const combined = useMemo(
+    () => [
+      ...profiles.map((u) => ({ type: "User", ...u })),
+      ...recProfiles.map((r) => ({ type: "Recruiter", ...r })),
+    ],
+    [profiles, recProfiles]
+  );
+
+  const filtered = useMemo(
+    () =>
+      combined.filter((u) => {
+        if (filterType && u.type !== filterType) return false;
+        if (!filterText) return true;
+        const txt = filterText.toLowerCase();
+        return (
+          u.first_name?.toLowerCase().includes(txt) ||
+          u.last_name?.toLowerCase().includes(txt) ||
+          u.email?.toLowerCase().includes(txt)
+        );
+      }),
+    [combined, filterText, filterType]
+  );
+
+  const paginated = filtered.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
+  const handleChangePage = (_, newPage) => setPage(newPage);
+  const handleChangeRowsPerPage = (e) => {
+    setRowsPerPage(parseInt(e.target.value, 10));
+    setPage(0);
+  };
 
   return (
     <Container sx={{ my: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Admin Dashboard
-      </Typography>
+      {/* Header */}
+      <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+        <Typography variant="h4" sx={{ flexGrow: 1 }}>
+          Admin Dashboard
+        </Typography>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={() => navigate("/admin-resume")}
+        >
+          Resume Dashboard
+        </Button>
+      </Box>
 
       {/* Info Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {[
-          ["Total Users", profiles.length],
+          ["Total Users", profiles.length + recProfiles.length],
           ["Candidates", roleCounts.candidate],
           ["Admins", roleCounts.admin],
           ["Recruiters", recProfiles.length],
         ].map(([title, val]) => (
           <Grid item xs={12} sm={6} md={3} key={title}>
-            <Card elevation={3} sx={{ textAlign: "center", py: 2 }}>
+            <Card
+              elevation={3}
+              sx={{
+                textAlign: "center",
+                py: 2,
+                bgcolor: theme.palette.background.paper,
+                borderLeft: `5px solid ${theme.palette.primary.main}`,
+              }}
+            >
               <CardContent>
-                <Typography variant="subtitle1">{title}</Typography>
-                <Typography variant="h3">{val}</Typography>
+                <Typography variant="subtitle2" color="text.secondary">
+                  {title}
+                </Typography>
+                <Typography variant="h5" color="primary">
+                  {val}
+                </Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -431,98 +443,126 @@ export default function AdminDashboard() {
         </Grid>
       </Grid>
 
-      {/* Action Buttons */}
-      <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-        <Button variant="contained" onClick={() => openCreate("User")}>
-          New User
-        </Button>
-        <Button variant="contained" onClick={() => openCreate("Recruiter")}>
-          New Recruiter
-        </Button>
+      {/* Filters */}
+      <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
+        <TextField
+          size="small"
+          label="Search"
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          sx={{ flex: "1 1 240px" }}
+        />
+        <FormControl size="small" sx={{ width: 160 }}>
+          <InputLabel>Type</InputLabel>
+          <Select
+            value={filterType}
+            label="Type"
+            onChange={(e) => setFilterType(e.target.value)}
+          >
+            <MenuItem value="">
+              <em>All</em>
+            </MenuItem>
+            <MenuItem value="User">User</MenuItem>
+            <MenuItem value="Recruiter">Recruiter</MenuItem>
+          </Select>
+        </FormControl>
       </Box>
 
       {/* Combined Table */}
       {loading ? (
         <Typography>Loading…</Typography>
       ) : (
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Type</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Avatar</TableCell>
-              <TableCell>First</TableCell>
-              <TableCell>Last</TableCell>
-              <TableCell>Company</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Created</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {combined.map((row) => (
-              <TableRow key={`${row.type}-${row.id}`}>
-                <TableCell>{row.type}</TableCell>
-                <TableCell sx={{ textTransform: "capitalize" }}>
-                  {row.role || (row.type === "Recruiter" ? "recruiter" : "")}
-                </TableCell>
-                <TableCell>
-                  <Avatar src={getAvatarUrl(row.profile_picture)}>
-                    {!row.profile_picture &&
-                      (row.first_name?.[0] || row.company?.[0] || "?")}
-                  </Avatar>
-                </TableCell>
-                <TableCell>{row.first_name}</TableCell>
-                <TableCell>{row.last_name}</TableCell>
-                <TableCell>{row.company}</TableCell>
-                <TableCell>{row.email}</TableCell>
-                <TableCell>
-                  {new Date(row.created_at).toLocaleDateString()}
-                </TableCell>
-                <TableCell align="right">
-                  <Button size="small" onClick={() => openEdit(row, row.type)}>
-                    Edit
-                  </Button>
-                  <Button
-                    size="small"
-                    color="error"
-                    onClick={() => openEdit(row, row.type)}
-                  >
-                    Delete
-                  </Button>
-                </TableCell>
+        <>
+          <Table>
+            <TableHead>
+              <TableRow>
+                {[
+                  "Type",
+                  "Role",
+                  "Avatar",
+                  "First",
+                  "Last",
+                  "Company",
+                  "Email",
+                  "Created",
+                  "Actions",
+                ].map((h) => (
+                  <TableCell key={h}>{h}</TableCell>
+                ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {paginated.map((row) => (
+                <TableRow
+                  key={`${row.type}-${row.id}`}
+                  sx={{
+                    "&:nth-of-type(odd)": {
+                      backgroundColor: theme.palette.action.hover,
+                    },
+                    "&:hover": {
+                      backgroundColor: theme.palette.action.selected,
+                    },
+                  }}
+                >
+                  <TableCell>{row.type}</TableCell>
+                  <TableCell sx={{ textTransform: "capitalize" }}>
+                    {row.role}
+                  </TableCell>
+                  <TableCell>
+                    <Avatar src={getAvatarUrl(row.profile_picture)}>
+                      {!row.profile_picture && row.first_name?.[0]}
+                    </Avatar>
+                  </TableCell>
+                  <TableCell>{row.first_name}</TableCell>
+                  <TableCell>{row.last_name}</TableCell>
+                  <TableCell>{row.company}</TableCell>
+                  <TableCell>{row.email}</TableCell>
+                  <TableCell>
+                    {new Date(row.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Button
+                      size="small"
+                      onClick={() => openEdit(row, row.type)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={() => openEdit(row, row.type)}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            component="div"
+            count={filtered.length}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[5, 10, 25]}
+          />
+        </>
       )}
 
       {/* Create/Edit/Delete Modal */}
-      <Dialog
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        maxWidth="md"
-        fullWidth
-      >
+      <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           {(editing ? "Edit" : "Create") + " " + form.type}
         </DialogTitle>
         <DialogContent>
-          <Box
-            component="form"
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 2,
-              mt: 1,
-            }}
-          >
-            {/* Common fields */}
+          <Box component="form" sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, mt: 1 }}>
             <TextField
               label="Email"
               name="email"
               value={form.email}
-              onChange={handleChange}
+              onChange={handleFormChange}
               fullWidth
             />
             {form.type === "User" && !editing && (
@@ -531,7 +571,7 @@ export default function AdminDashboard() {
                 name="password"
                 type="password"
                 value={form.password}
-                onChange={handleChange}
+                onChange={handleFormChange}
                 fullWidth
               />
             )}
@@ -541,20 +581,20 @@ export default function AdminDashboard() {
                   label="First Name"
                   name="first_name"
                   value={form.first_name}
-                  onChange={handleChange}
+                  onChange={handleFormChange}
                   fullWidth
                 />
                 <TextField
                   label="Last Name"
                   name="last_name"
                   value={form.last_name}
-                  onChange={handleChange}
+                  onChange={handleFormChange}
                   fullWidth
                 />
                 <Select
                   name="role"
                   value={form.role}
-                  onChange={handleChange}
+                  onChange={handleFormChange}
                   fullWidth
                 >
                   {["candidate", "recruiter", "admin"].map((r) => (
@@ -570,55 +610,48 @@ export default function AdminDashboard() {
                 label="Company"
                 name="company"
                 value={form.company}
-                onChange={handleChange}
+                onChange={handleFormChange}
                 fullWidth
               />
             )}
-            {/* Shared */}
             <TextField
               label="Phone"
               name="phone"
               value={form.phone}
-              onChange={handleChange}
+              onChange={handleFormChange}
               fullWidth
             />
             <TextField
               label="Website"
               name="website"
               value={form.website}
-              onChange={handleChange}
+              onChange={handleFormChange}
               fullWidth
             />
             <TextField
               label="LinkedIn"
               name="linkedin"
               value={form.linkedin}
-              onChange={handleChange}
+              onChange={handleFormChange}
               fullWidth
             />
             <TextField
               label="Twitter"
               name="twitter"
               value={form.twitter}
-              onChange={handleChange}
+              onChange={handleFormChange}
               fullWidth
             />
-            {/* Avatar */}
             <TextField
               label="Avatar URL"
               name="profile_picture"
               value={form.profile_picture}
-              onChange={handleChange}
+              onChange={handleFormChange}
               fullWidth
             />
             <Button variant="outlined" component="label">
               Upload Avatar
-              <input
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={handleFile}
-              />
+              <input type="file" hidden accept="image/*" onChange={handleFile} />
             </Button>
             {avatarFile && <Typography>{avatarFile.name}</Typography>}
           </Box>
