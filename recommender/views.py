@@ -289,3 +289,44 @@ class GenerateEmbeddingAPI(APIView):
 
 class LandingPageView(TemplateView):
     template_name = "landing.html"
+
+class TestRecommenderView(TemplateView):
+    template_name = "test.html"
+    
+    def get(self, request, *args, **kwargs):
+        return self.render_to_response({})
+    
+    def post(self, request, *args, **kwargs):
+        job_desc = request.POST.get("job_description", "")
+        top_n = int(request.POST.get("top_n", 5))
+        method = request.POST.get("method", "standard")
+        
+        resumes = load_resumes()
+        
+        # Filter only resumes with valid embeddings
+        valid_resumes = [r for r in resumes if r.get('embedding') is not None and np.size(r['embedding']) > 0]
+        logger.info(f"Processing {len(valid_resumes)} resumes with valid embeddings")
+        
+        # Choose recommendation method based on selection
+        if method == "llm":
+            recommended = recommend_resumes_llm(job_desc, valid_resumes, top_n)
+        elif method == "hybrid":
+            recommended = hybrid_recommend_resumes(job_desc, valid_resumes, top_n)
+        else:  # standard NLP
+            recommended = recommend_resumes(job_desc, valid_resumes, top_n)
+        
+        logger.info({
+            'event': 'test_recommendation_request',
+            'user_id': getattr(request.user, 'id', None),
+            'method': method,
+            'job_desc_length': len(job_desc)
+        })
+        
+        context = {
+            'job_desc': job_desc,
+            'top_n': top_n,
+            'method': method,
+            'recommendations': recommended
+        }
+        
+        return self.render_to_response(context)

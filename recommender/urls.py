@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import RecommendAPI, ProfileAPI, GenerateEmbeddingAPI, LLMRecommendAPI, LandingPageView
+from .views import RecommendAPI, ProfileAPI, GenerateEmbeddingAPI, LLMRecommendAPI, LandingPageView, TestRecommenderView
 from .auth_views import SignUpView, LoginView
 
 urlpatterns = [
     path('', LandingPageView.as_view(), name='landing'),
+    path('test/', TestRecommenderView.as_view(), name='test-recommender'),
     path('recommend/', RecommendAPI.as_view(), name='recommend-api'),
     path('recommend/llm/', LLMRecommendAPI.as_view(), name='llm-recommend-api'),
     path('auth/signup/', SignUpView.as_view(), name='signup'),

@@ -35,30 +35,24 @@ def get_nlp():
 def get_sentence_transformer():
     global _model
     if _model is None:
-        from sentence_transformers import SentenceTransformer
-        import torch
-        
-        # Explicitly set device to CPU to avoid meta tensor issues with PyTorch 2.6+
-        device = torch.device('cpu')
-        
         try:
-            # Initialize model with explicit device to avoid meta tensor error
-            _model = SentenceTransformer("all-MiniLM-L6-v2", device=device)
+            # First load the model without device specification
+            _model = SentenceTransformer("all-MiniLM-L6-v2")
+            # Then move it to CPU
+            _model = _model.to('cpu')
         except Exception as e:
             logger.error(f"Error loading sentence transformer: {e}")
-            # Fall back to default initialization if needed
-            _model = SentenceTransformer("all-MiniLM-L6-v2")
+            raise
     return _model
 
 # Configuration - Adjust these weights based on importance
 WEIGHTS = {
-    'similarity': 0.4,
+    'similarity': 0.40,  # Increased weight for semantic similarity
     'experience': 0.25,
-    'skill_seniority': 0.15,
-    'keywords': 0.1,
+    'skill_match': 0.20, # Renamed for clarity
     'education': 0.05,
-    'languages': 0.03,
-    'certifications': 0.02
+    'languages': 0.05,
+    'certifications': 0.05
 }
 
 logger = logging.getLogger(__name__)
@@ -88,13 +82,16 @@ def enhance_resume_embedding(resume):
         position = exp.get('position', '')
         description = exp.get('description', '')
         
-        # Extract technical keywords
-        tech_terms = " ".join([word for word in description.split() 
-                             if word.lower() in {'python', 'java', 'aws', 'sql'}])
+        # Extract meaningful keywords from description
+        keywords = []
+        if description:
+            doc = get_nlp()(description)
+            keywords = [token.text for token in doc if not token.is_stop and token.is_alpha and len(token.text) > 2]
+            keywords = keywords[:5]  # limit to top 5 keywords
         
         experience_entry = f"Worked as {position} at {company}"
-        if tech_terms:
-            experience_entry += f" with focus on {tech_terms}"
+        if keywords:
+            experience_entry += f" with focus on {', '.join(keywords)}"
         experience.append(experience_entry)
     
     if experience:
@@ -105,9 +102,10 @@ def enhance_resume_embedding(resume):
     if skills:
         sections.append("Technical Skills: " + ", ".join(skills))
     
+    # Emphasize certifications more prominently
     certs = resume.get('certifications', [])
     if certs:
-        sections.append("Certifications Earned: " + ", ".join(certs))
+        sections.append("Certifications Earned: " + ", ".join([cert for cert in certs if cert]))
     
     # Final embedding text
     embedding_text = " ".join(sections)
@@ -195,155 +193,6 @@ def load_resumes():
         logger.error(f"Error loading resumes: {str(e)}")
         return []
 
-def validate_resume(resume):
-    """Validate required resume fields"""
-    required_fields = ['skills', 'experience', 'education', 'user_id', 'embedding']
-    return all(field in resume for field in required_fields)
-
-def extract_job_requirements(job_desc):
-    """Advanced requirement extraction with tech stack analysis"""
-    doc = get_nlp()(job_desc.lower())
-    
-    requirements = {
-        'tech_stack': defaultdict(lambda: {'years': 0, 'priority': 1}),
-        'required_skills': [],
-        'bonus_skills': [],
-        'experience_level': 'mid',
-        'responsibilities': []
-    }
-
-    # Pattern matching for experience requirements
-    for match in get_nlp()(job_desc).ents:
-        if match.label_ == 'DATE' and 'year' in match.text:
-            # Find associated technology
-            for token in match.root.head.children:
-                if token.dep_ == 'prep' and token.text == 'in':
-                    tech = ' '.join([t.text for t in token.subtree if t.pos_ == 'NOUN'])
-                    if tech:
-                        requirements['tech_stack'][tech.lower()]['years'] = \
-                            int(''.join(filter(str.isdigit, match.text)))
-
-    # Detect skill levels and priorities
-    for sent in doc.sents:
-        if 'expert' in sent.text or 'senior' in sent.text:
-            requirements['experience_level'] = 'senior'
-        if 'junior' in sent.text or 'entry-level' in sent.text:
-            requirements['experience_level'] = 'junior'
-        
-        # Detect required skills with context
-        for chunk in sent.noun_chunks:
-            if 'experience' in chunk.text or 'skill' in chunk.text:
-                skill = chunk.text.replace('experience', '').replace('skill', '').strip()
-                if skill:
-                    requirements['required_skills'].append(skill)
-
-    # Detect bonus skills
-    for token in doc:
-        if token.text == 'plus' and doc[token.i+1].text == 'in':
-            requirements['bonus_skills'] = [t.text for t in doc[token.i+2].subtree if t.pos_ == 'NOUN']
-
-    return requirements
-
-def calculate_enhanced_score(resume, job_embedding, requirements):
-    """Advanced scoring with tech-specific experience evaluation"""
-    scores = defaultdict(float)
-    
-    # 1. Tech stack matching
-    tech_scores = []
-    for tech, req in requirements['tech_stack'].items():
-        tech_experience = 0
-        # Calculate experience duration for this specific tech
-        for exp in resume.get('experience', []):
-            if tech in ' '.join(exp.get('skills', [])).lower():
-                start = datetime.strptime(exp['start_date'], '%Y-%m-%d')
-                end = datetime.strptime(exp['end_date'], '%Y-%m-%d') if exp['end_date'] else datetime.now()
-                tech_experience += (end - start).days / 365
-                
-        # Calculate match quality
-        if tech_experience > 0:
-            match_ratio = min(tech_experience / req['years'], 2.0)  # Allow over-qualified
-            tech_scores.append(match_ratio * req['priority'])
-    
-    scores['tech_stack'] = sum(tech_scores) / len(tech_scores) if tech_scores else 0
-
-    # 2. Skill context analysis
-    skill_context_score = 0
-    resume_text = ' '.join([
-        f"{exp.get('position', '')} {exp.get('description', '')}" 
-        for exp in resume.get('experience', [])
-    ]).lower()
-    
-    for skill in requirements['required_skills']:
-        # Count occurrences in meaningful contexts
-        skill_count = sum(
-            1 for sentence in nlp(resume_text).sents 
-            if skill in sentence.text and any(
-                token.text in {'develop', 'build', 'lead', 'architect'} 
-                for token in sentence
-            )
-        )
-        skill_context_score += min(skill_count * 0.2, 1.0)
-    
-    scores['skill_context'] = skill_context_score / len(requirements['required_skills']) if requirements['required_skills'] else 0
-
-    # 3. Experience level matching
-    total_experience = sum(
-        (datetime.strptime(exp['end_date'], '%Y-%m-%d') - 
-         datetime.strptime(exp['start_date'], '%Y-%m-%d')).days / 365
-        for exp in resume.get('experience', [])
-    )
-    
-    level_multiplier = 1.0
-    if requirements['experience_level'] == 'senior' and total_experience >= 5:
-        level_multiplier = 1.5
-    elif requirements['experience_level'] == 'mid' and 3 <= total_experience < 5:
-        level_multiplier = 1.2
-    
-    # 4. Semantic similarity (existing)
-    scores['similarity'] = cosine_similarity([job_embedding], [resume['embedding']])[0][0]
-
-    # Updated weights
-    WEIGHTS = {
-        'tech_stack': 0.4,
-        'skill_context': 0.3,
-        'similarity': 0.2,
-        'experience_level': 0.1
-    }
-
-    return sum(WEIGHTS[k] * scores[k] for k in WEIGHTS)
-
-def get_job_embedding(job_desc):
-    cache_key = f"job_embedding_{hash(job_desc)}"
-    embedding = cache.get(cache_key)
-    
-    if not embedding:
-        embedding = get_sentence_transformer().encode(job_desc).tobytes()
-        cache.set(cache_key, embedding, timeout=3600)  # Cache for 1 hour
-    
-    logger.debug(f"Job Embedding Length: {len(embedding)}")
-    return np.frombuffer(embedding, dtype="float32")
-
-def score_resume(resume, job_embedding):
-    try:
-        logger.debug(f"Resume ID: {resume.get('user_id')}")
-        logger.debug(f"Embedding Type: {type(resume['embedding'])}")
-        logger.debug(f"Embedding Length: {len(resume['embedding'])}")
-        
-        # If embedding is stored as Base64, decode it
-        if isinstance(resume["embedding"], str):
-            embedding_bytes = base64.b64decode(resume["embedding"])
-        else:
-            embedding_bytes = resume["embedding"]
-
-        # Convert to NumPy array
-        resume_embedding = np.frombuffer(embedding_bytes, dtype="float32")
-        similarity = cosine_similarity([job_embedding], [resume_embedding])[0][0]
-        logger.debug(f"Similarity Score: {similarity}")
-        return resume, similarity
-    except Exception as e:
-        logger.error(f'Error scoring resume: {str(e)}')
-        return resume, 0
-
 def extract_keywords_and_requirements(text):
     """Extract job requirements using advanced NLP techniques without domain-specific hardcoding"""
     
@@ -352,7 +201,8 @@ def extract_keywords_and_requirements(text):
     
     # Collect noun phrases that follow skill indicators
     skill_indicators = ['experience in', 'knowledge of', 'skilled in', 'proficient with', 
-                       'familiar with', 'expertise in', 'background in', 'ability to']
+                       'familiar with', 'expertise in', 'background in', 'ability to',
+                       'competent in', 'trained in', 'qualified in', 'specializing in']
     
     skills = []
     
@@ -412,9 +262,9 @@ def extract_keywords_and_requirements(text):
     except Exception as e:
         logger.error(f"Error in keyword extraction: {str(e)}")
     
-    # 4. Extract education requirements using dependency parsing - WITH IMPROVED DETECTION
+    # 4. Extract education requirements
     education_terms = []
-    education_mentioned = False  # Flag to track if education is mentioned at all
+    education_mentioned = False
     education_indicators = ['degree', 'bachelor', 'master', 'phd', 'diploma', 'certification', 'graduated', 'university']
     education_requirement_phrases = ['degree required', 'must have degree', 'education required', 'degree in', 'qualified with']
     
@@ -447,18 +297,149 @@ def extract_keywords_and_requirements(text):
     # 5. Extract required languages (human languages, not programming)
     language_entities = [ent.text for ent in doc.ents if ent.label_ == 'LANGUAGE']
     
+    # 6. Look for certification requirements
+    certification_patterns = [
+        r'certification(?:s)? (?:in|required|needed): ([^\.]+)',
+        r'certified ([^\.]+)',
+        r'require(?:s|d)? ([^\.]+) certification'
+    ]
+    certifications = []
+    for pattern in certification_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        certifications.extend(matches)
+    
     # Compile all requirements
     requirements = {
         'skills': list(set(skills)),
         'years_experience': years,
         'education_level': education_level,
-        'education_mentioned': education_mentioned,  # New flag to indicate if education was mentioned
+        'education_mentioned': education_mentioned,
         'education_terms': education_terms,
         'languages': language_entities,
+        'certifications': list(set(certifications)),
         'full_text': text
     }
     
     return requirements
+
+def get_skill_similarity(resume_skills, job_skills):
+    """Calculate skill similarity using semantic embeddings and direct matching"""
+    if not resume_skills or not job_skills:
+        return 0.0
+    
+    # Direct matches (case-insensitive)
+    direct_matches = 0
+    matched_resume_skills = []
+    
+    for js in job_skills:
+        best_match = None
+        best_score = 0
+        
+        for rs in resume_skills:
+            # Skip if this resume skill already matched with a job skill
+            if rs in matched_resume_skills:
+                continue
+                
+            # Exact match or substring match
+            if js.lower() == rs.lower():
+                score = 1.0
+            elif js.lower() in rs.lower() or rs.lower() in js.lower():
+                score = 0.8
+            else:
+                # Check for word-level overlap
+                js_words = set(js.lower().split())
+                rs_words = set(rs.lower().split())
+                if js_words & rs_words:  # If there's an intersection
+                    score = len(js_words & rs_words) / len(js_words)
+                else:
+                    score = 0
+            
+            if score > best_score:
+                best_score = score
+                best_match = rs
+        
+        if best_match and best_score > 0.5:  # Only consider good enough matches
+            direct_matches += best_score
+            matched_resume_skills.append(best_match)
+    
+    # Semantic similarity for unmatched skills
+    semantic_score = 0
+    remaining_resume_skills = [rs for rs in resume_skills if rs not in matched_resume_skills]
+    remaining_job_skills = [js for js in job_skills if not any(js.lower() in rs.lower() or rs.lower() in js.lower() for rs in matched_resume_skills)]
+    
+    # Only calculate semantic score if there are remaining skills and direct matches are not satisfactory
+    if remaining_resume_skills and remaining_job_skills and direct_matches < len(job_skills) * 0.7:
+        try:
+            # Use sentence transformer for semantic matching
+            model = get_sentence_transformer()
+            resume_embeddings = model.encode(remaining_resume_skills)
+            job_embeddings = model.encode(remaining_job_skills)
+            
+            # Calculate similarity matrix
+            sim_matrix = cosine_similarity(resume_embeddings, job_embeddings)
+            
+            # For each job skill, find best matching resume skill
+            best_matches = np.max(sim_matrix, axis=0)
+            semantic_score = np.mean(best_matches) * 0.5  # Half weight for semantic matches
+        except Exception as e:
+            logger.warning(f"Error calculating semantic skill similarity: {e}")
+            semantic_score = 0
+    
+    # Calculate combined score
+    combined_score = direct_matches / max(1, len(job_skills))
+    if semantic_score > 0:
+        combined_score = 0.7 * combined_score + 0.3 * semantic_score
+    
+    return min(1.0, combined_score)
+
+def get_certification_score(resume_certs, job_description, job_certs=None):
+    """Calculate certification relevance score without relying on domain detection"""
+    if not resume_certs:
+        return 0.0, []
+    
+    # Filter out empty strings
+    resume_certs = [cert for cert in resume_certs if cert and isinstance(cert, str)]
+    if not resume_certs:
+        return 0.0, []
+    
+    # If job specifies certifications, do direct matching
+    match_reasons = []
+    if job_certs:
+        cert_matches = []
+        for r_cert in resume_certs:
+            for j_cert in job_certs:
+                if r_cert.lower() in j_cert.lower() or j_cert.lower() in r_cert.lower():
+                    cert_matches.append(r_cert)
+                    match_reasons.append(f"Has required certification: {r_cert}")
+                    break
+                    
+        if cert_matches:
+            return len(cert_matches) / len(job_certs), match_reasons
+    
+    # If no direct matches or no job certs specified, evaluate relevance using semantic similarity
+    try:
+        model = get_sentence_transformer()
+        cert_embeddings = model.encode(resume_certs)
+        job_embedding = model.encode([job_description])
+        
+        # Calculate similarity between each cert and the job
+        similarities = cosine_similarity(cert_embeddings, job_embedding)
+        
+        # Get best matching certs (above threshold)
+        relevant_certs = []
+        for i, sim in enumerate(similarities):
+            if sim[0] > 0.3:  # Threshold for relevance
+                relevant_certs.append(resume_certs[i])
+                match_reasons.append(f"Has relevant certification: {resume_certs[i]}")
+        
+        if relevant_certs:
+            return min(0.8, 0.2 * len(relevant_certs)), match_reasons
+            
+    except Exception as e:
+        logger.warning(f"Error calculating certification relevance: {e}")
+    
+    # Give minimal credit just for having certifications
+    return min(0.3, 0.1 * len(resume_certs)), []
 
 def recommend_resumes(job_desc, resumes, top_n=5):
     """Match resumes to job description using NLP and provide match reasons"""
@@ -472,34 +453,34 @@ def recommend_resumes(job_desc, resumes, top_n=5):
         # Generate job description embedding for semantic matching
         job_embedding = get_sentence_transformer().encode(job_desc)
         
+        # Process resumes in parallel
+        resumes_to_process = [r for r in resumes if r.get('embedding') is not None and np.size(r['embedding']) > 0]
         scores = []
-        for resume in resumes:
+        
+        # Process each resume using optimized scoring
+        for resume in resumes_to_process:
             try:
-                if resume.get('embedding') is None or np.size(resume['embedding']) == 0:
-                    continue
+                match_reasons = []
+                score_components = {}
                 
                 # 1. Calculate semantic similarity score
                 resume_embedding = np.array(resume['embedding'])
                 semantic_score = cosine_similarity([job_embedding], [resume_embedding])[0][0]
+                score_components['similarity'] = semantic_score
                 
-                # 2. Gather match reasons based on requirements
-                match_reasons = []
+                # 2. Calculate skill match score
                 resume_skills = resume.get('skills', [])
+                skill_match_score = get_skill_similarity(resume_skills, job_requirements['skills'])
+                score_components['skill_match'] = skill_match_score
                 
-                # Add skill matches to reasons
-                skill_matches = []
-                for resume_skill in resume_skills:
-                    for job_skill in job_requirements['skills']:
-                        # Check for skill match (case insensitive substring match)
-                        if job_skill.lower() in resume_skill.lower() or resume_skill.lower() in job_skill.lower():
-                            skill_matches.append(resume_skill)
-                            match_reasons.append(f"Has required skill: {resume_skill}")
+                # Only include specific skill matches in reasons, not the raw score
+                for rs in resume_skills:
+                    for js in job_requirements['skills']:
+                        if js.lower() in rs.lower() or rs.lower() in js.lower():
+                            match_reasons.append(f"Has required skill: {rs}")
                             break
                 
-                # Calculate skill match score
-                skill_score = len(skill_matches) / len(job_requirements['skills']) if job_requirements['skills'] else 0
-                
-                # Check years of experience
+                # 3. Calculate experience score
                 req_years = job_requirements['years_experience']
                 candidate_years = calculate_total_experience(resume.get('experience', []))
                 
@@ -509,9 +490,12 @@ def recommend_resumes(job_desc, resumes, top_n=5):
                 else:
                     experience_score = min(candidate_years / max(1, req_years), 1.0)
                 
-                # Check education level - UPDATED LOGIC
+                score_components['experience'] = experience_score
+                
+                # 4. Calculate education score
                 candidate_education = get_highest_education(resume.get('education', []))
                 edu_score = calculate_education_score(candidate_education, job_requirements['education_level'])
+                score_components['education'] = edu_score
                 
                 # Only add education as a match reason if education was explicitly mentioned
                 if job_requirements.get('education_mentioned', False) and edu_score > 0.7:
@@ -521,18 +505,47 @@ def recommend_resumes(job_desc, resumes, top_n=5):
                         match_reasons.append(f"Has {degree} from {institution}")
                         break
                 
+                # 5. Calculate certification score
+                resume_certs = resume.get('certifications', [])
+                job_certs = job_requirements.get('certifications', [])
+                cert_score_tuple = get_certification_score(resume_certs, job_desc, job_certs)
+                
+                # Handle the tuple return value correctly
+                if isinstance(cert_score_tuple, tuple):
+                    cert_score, cert_reasons = cert_score_tuple
+                    match_reasons.extend(cert_reasons)
+                else:
+                    # Handle the case where a float was returned (backward compatibility)
+                    cert_score = cert_score_tuple
+                    
+                score_components['certifications'] = cert_score
+                
+                # 6. Calculate language score
+                language_score = 0.0
+                resume_langs = resume.get('languages', [])
+                job_langs = job_requirements.get('languages', [])
+                
+                if resume_langs and job_langs:
+                    lang_matches = []
+                    for r_lang in resume_langs:
+                        for j_lang in job_langs:
+                            if r_lang.lower() == j_lang.lower():
+                                lang_matches.append(r_lang)
+                                match_reasons.append(f"Speaks required language: {r_lang}")
+                                break
+                    
+                    language_score = len(lang_matches) / len(job_langs)
+                
+                score_components['languages'] = language_score
+                
                 # Calculate final score with weights
-                final_score = (
-                    semantic_score * 0.4 +   # Semantic similarity
-                    skill_score * 0.3 +      # Skill match
-                    experience_score * 0.2 + # Experience match
-                    edu_score * 0.1          # Education match
-                )
+                final_score = sum(WEIGHTS[component] * score for component, score in score_components.items())
                 
                 # Add match reasons and score to resume
                 resume_with_reasons = resume.copy()
                 resume_with_reasons['match_reasons'] = match_reasons
                 resume_with_reasons['score'] = float(final_score)
+                resume_with_reasons['score_components'] = score_components  # Add component scores for transparency
                 
                 scores.append((resume_with_reasons, final_score))
                 
@@ -586,24 +599,31 @@ def get_highest_education(education_entries):
 
 def calculate_education_score(candidate_edu, required_edu):
     """Calculate how well candidate's education matches requirements"""
+    # Define education levels and their numeric values
     edu_levels = {
-        'phd': 5,
-        'masters': 4, 
+        'none': 0,
+        'high school': 1,
+        'associate': 2, 
+        'diploma': 2,
         'bachelors': 3,
-        'associate': 2,
-        'other': 1,
-        'none': 0
+        'masters': 4,
+        'phd': 5,
+        'doctorate': 5
     }
-    candidate_level = edu_levels.get(candidate_edu, 0)
-    required_level = edu_levels.get(required_edu, 0)
     
-    # Perfect or overqualified
+    # Default values if not in the dictionary
+    candidate_level = edu_levels.get(candidate_edu.lower(), 0)
+    required_level = edu_levels.get(required_edu.lower(), 0)
+    
+    # If no education is required, any education is fine
+    if required_level == 0:
+        return 1.0
+    
+    # Calculate score based on whether candidate meets or exceeds requirements
     if candidate_level >= required_level:
         return 1.0
-    # Underqualified but has education
-    elif candidate_level > 0:
+    elif candidate_level > 0:  # Partial credit for some education
         return candidate_level / required_level
-    # No education when some is required
     else:
         return 0.0
 
@@ -613,14 +633,6 @@ def preprocess_text(text):
     tokens = [token.text for token in doc 
              if not token.is_stop and not token.is_punct]
     return " ".join(tokens)
-
-def get_skill_similarity(resume_skills, job_skills):
-    """Calculate skill-specific similarity"""
-    resume_set = set(s.lower() for s in resume_skills)
-    job_set = set(s.lower() for s in job_skills)
-    if not job_set:
-        return 0
-    return len(resume_set.intersection(job_set)) / len(job_set)
 
 def get_embedding(text):
     """Generate embedding for the given text using lazy-loaded model. Logs execution for debugging."""

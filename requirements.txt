@@ -6,11 +6,9 @@ sentence_transformers
 spacy
 supabase
 openai
-tenacity
 django-cors-headers
 nltk
 python-dotenv
 gunicorn
 whitenoise
-huggingface_hub[hf_xet]
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl

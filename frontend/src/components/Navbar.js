@@ -72,7 +72,10 @@ const Navbar = () => {
       
       // Admin-only links
       if (userRole === 'admin') {
-        basicLinks.push({ label: "Admin Dashboard", path: "/admin-dashboard" });
+        basicLinks.push(
+          { label: "Admin Dashboard",  path: "/admin-dashboard"  },
+          { label: "Resume Dashboard", path: "/admin-resume" }
+        );
       }
     }
   

@@ -31,6 +31,7 @@ import ResetPassword from './pages/ResetPassword';
 import NotFound from './pages/NotFound';
 import ServerError from './pages/ServerError';
 import SettingsPage from './pages/SettingsPage';
+import AdminResumeDashboard from './pages/AdminResumeDashboard';
 
 function App() {
   const location = useLocation();
@@ -140,6 +141,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+          path="/admin-resume"
+          element={
+            <ProtectedRoute>
+              <AdminResumeDashboard />
+            </ProtectedRoute>
+          }
+        />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/500" element={<ServerError />} />
           <Route path="*" element={<NotFound />} />
