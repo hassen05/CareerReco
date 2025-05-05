@@ -36,10 +36,16 @@ def get_sentence_transformer():
     global _model
     if _model is None:
         try:
-            # First load the model without device specification
-            _model = SentenceTransformer("all-MiniLM-L6-v2")
-            # Then move it to CPU
-            _model = _model.to('cpu')
+            # Load with explicit device and reduced memory footprint
+            _model = SentenceTransformer(
+                "all-MiniLM-L6-v2",
+                device="cpu",
+                use_auth_token=False
+            )
+            # Reduce memory usage
+            _model.max_seq_length = 128  
+            _model._target_device = "cpu"
+            logger.info("SentenceTransformer loaded with optimized settings")
         except Exception as e:
             logger.error(f"Error loading sentence transformer: {e}")
             raise
