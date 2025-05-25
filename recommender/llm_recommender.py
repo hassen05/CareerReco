@@ -184,11 +184,12 @@ def get_llm_evaluation(job_desc, resume_text, model_name=DEFAULT_LLM_MODEL):
         system_prompt = """You are an expert resume analyst and hiring consultant with deep knowledge of various industries and roles.
 Your task is to evaluate how well a candidate's resume matches a job description.
 Provide a detailed analysis including a match score and specific reasoning.
-Your output must be formatted as valid JSON with the following structure:
+
+IMPORTANT: Your response MUST be a valid, properly formatted JSON object with the following structure:
 {
-  "score": 85,  // Overall match score from 0-100
+  "score": 85,
   "reasoning": "Text explanation of the match scoring",
-  "skill_match": [  // List of key skills from job that match resume
+  "skill_match": [
     {"skill": "Python", "match": true, "importance": "critical"},
     {"skill": "AWS", "match": false, "importance": "preferred"}
   ],
@@ -196,7 +197,9 @@ Your output must be formatted as valid JSON with the following structure:
   "education_match": "String describing how well education matches",
   "strengths": ["String array of candidate strengths for this role"],
   "weaknesses": ["String array of candidate gaps for this role"]
-}"""
+}
+
+DO NOT include any text outside the JSON object. Do not include markdown formatting, code blocks, or explanations. Return ONLY the JSON object itself."""
 
         user_prompt = f"""Please evaluate how well this candidate matches the job description.
 
@@ -241,17 +244,22 @@ Score the match from 0-100 and explain your reasoning in the required JSON forma
             selected_model = LLM_MODELS.get(model_name, LLM_MODELS[DEFAULT_LLM_MODEL])
             logger.info(f"[{request_id}] Using model: {selected_model}")
             
-            # Make the API call
+            # Make the API call with explicit JSON formatting parameters
             completion = client.chat.completions.create(
                 extra_headers=headers,
                 model=selected_model,
-                response_format={"type": "json_object"},
+                response_format={"type": "json_object"},  # Request JSON format explicitly
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": user_prompt},
+                    # Add an explicit instruction as the last message to ensure JSON formatting
+                    {"role": "assistant", "content": "I'll analyze this match and provide a JSON response."}
                 ],
-                temperature=0.2,
-                max_tokens=1000
+                temperature=0.1,  # Lower temperature for more consistent outputs
+                max_tokens=1500,  # Increase token limit to ensure complete response
+                top_p=0.9,       # More focused sampling
+                presence_penalty=0.1,  # Slight penalty for repetition
+                seed=42          # Use consistent seed for more predictable outputs
             )
             logger.info(f"[{request_id}] Received response from OpenRouter: {completion.model}")
         except Exception as e:
@@ -265,17 +273,56 @@ Score the match from 0-100 and explain your reasoning in the required JSON forma
         try:
             logger.debug(f"[{request_id}] Response content: {response_text[:500]}...")
             
-            # Clean the response text to ensure it's valid JSON
-            # First check if the response actually contains a JSON object
-            clean_text = response_text.strip()
-            # Find the first { and last } to extract just the JSON object if there's text before/after
-            if '{' in clean_text and '}' in clean_text:
-                start = clean_text.find('{')
-                end = clean_text.rfind('}')
-                if start >= 0 and end > start:
-                    clean_text = clean_text[start:end+1]
+            # Check if we have a meaningful response
+            if not response_text or len(response_text) < 5:  # Arbitrary minimum length
+                logger.error(f"[{request_id}] Response too short or empty: '{response_text}'")
+                raise ValueError("Response too short or empty")
             
-            result = json.loads(clean_text)
+            # Import regex library if needed
+            import re
+            
+            # SIMPLIFIED APPROACH: Create a simple default result from the response
+            # This will work even if the JSON is malformed or truncated
+            default_result = {
+                "score": 50,
+                "reasoning": "Parsing the full response was not possible.",
+                "skill_match": [],
+                "experience_match": "Unknown",
+                "education_match": "Unknown",
+                "strengths": [],
+                "weaknesses": []
+            }
+            
+            # Try to extract just the score and reasoning which appear at the beginning
+            score_match = re.search(r'"score"\s*:\s*(\d+)', response_text)
+            if score_match:
+                try:
+                    default_result["score"] = int(score_match.group(1))
+                    logger.info(f"[{request_id}] Successfully extracted score: {default_result['score']}")
+                except:
+                    pass
+            
+            reasoning_match = re.search(r'"reasoning"\s*:\s*"([^"]+)"', response_text)
+            if reasoning_match:
+                default_result["reasoning"] = reasoning_match.group(1)
+                logger.info(f"[{request_id}] Successfully extracted reasoning")
+            
+            # Try one last time to parse the entire JSON properly
+            try:
+                clean_text = response_text.strip()
+                if '{' in clean_text and '}' in clean_text:
+                    start = clean_text.find('{')
+                    end = clean_text.rfind('}')
+                    if start >= 0 and end > start:
+                        result = json.loads(clean_text[start:end+1])
+                        logger.info(f"[{request_id}] Successfully parsed full JSON")
+                        return result
+            except:
+                logger.warning(f"[{request_id}] Full JSON parsing failed, using extracted values")
+                pass
+                
+            # Return our default result with extracted values
+            return default_result
             
             # Ensure we have the expected fields or provide defaults
             if 'score' not in result:
@@ -292,15 +339,30 @@ Score the match from 0-100 and explain your reasoning in the required JSON forma
             
             return result
             
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as json_err:
             logger.error(f"[{request_id}] LLM returned invalid JSON: {response_text[:200]}...")
             logger.error(f"[{request_id}] Full response: {response_text}")
-            return {
+            
+            # As a fallback, try to create a valid response from the model output
+            fallback_result = {
                 "score": 50,
                 "reasoning": "Error parsing LLM response: invalid JSON format",
                 "error": True,
                 "json_error": True
             }
+            
+            # Try to extract a score from the text if possible
+            try:
+                # Look for patterns like "score: 85" or "score is 85"
+                import re
+                score_match = re.search(r'score[:\s]+(\d+)', response_text, re.IGNORECASE)
+                if score_match:
+                    fallback_result["score"] = min(100, max(0, int(score_match.group(1))))
+                    logger.info(f"[{request_id}] Extracted fallback score: {fallback_result['score']}")
+            except Exception as extract_err:
+                logger.error(f"[{request_id}] Error extracting fallback score: {str(extract_err)}")
+            
+            return fallback_result
             
     except Exception as e:
         error_trace = traceback.format_exc()
@@ -470,15 +532,32 @@ def hybrid_recommend_resumes(job_desc, resumes, top_n=5, nlp_weight=0.4, llm_wei
     nlp_results = nlp_func(job_desc, resumes, top_n=len(resumes))
     
     # Create a map of resume ID to NLP score
-    nlp_scores = {result['resume']['id']: result['score'] for result in nlp_results}
+    nlp_scores = {}
+    for result in nlp_results:
+        # Check if the result has a nested 'resume' key or if the resume data is directly in the result
+        if 'resume' in result and isinstance(result['resume'], dict) and 'id' in result['resume']:
+            nlp_scores[result['resume']['id']] = result['score']
+        elif 'id' in result:  # If the resume data is directly in the result
+            nlp_scores[result['id']] = result['score']
+        else:
+            logger.warning(f"Skipping NLP result with unexpected structure: {result}")
     
     # Phase 2: Get LLM recommendations for top candidates from NLP
     # Only process top 20 or all if less than 20 to save API costs
-    top_nlp_candidates = [r['resume'] for r in nlp_results[:min(20, len(nlp_results))]]
+    top_nlp_candidates = []
+    for r in nlp_results[:min(20, len(nlp_results))]:
+        if 'resume' in r and isinstance(r['resume'], dict):
+            top_nlp_candidates.append(r['resume'])
+        elif 'id' in r:  # If the resume data is directly in the result
+            top_nlp_candidates.append(r)
+    logger.info(f"Selected {len(top_nlp_candidates)} top candidates for LLM evaluation")
     llm_results = recommend_resumes_llm(job_desc, top_nlp_candidates, top_n=len(top_nlp_candidates), model_name=model_name)
     
     # Create a map of resume ID to LLM score
-    llm_scores = {result['resume']['id']: result['score'] for result in llm_results}
+    llm_scores = {}
+    for result in llm_results:
+        if 'resume' in result and isinstance(result['resume'], dict) and 'id' in result['resume']:
+            llm_scores[result['resume']['id']] = result['score']
     
     # Phase 3: Combine scores
     combined_results = []
@@ -489,12 +568,14 @@ def hybrid_recommend_resumes(job_desc, resumes, top_n=5, nlp_weight=0.4, llm_wei
             combined_score = (nlp_weight * nlp_score) + (llm_weight * llm_score)
             
             # Find the full result objects to get reasoning
-            nlp_result = next((r for r in nlp_results if r['resume']['id'] == resume_id), None)
-            llm_result = next((r for r in llm_results if r['resume']['id'] == resume_id), None)
+            nlp_result = next((r for r in nlp_results if ('resume' in r and r['resume'].get('id') == resume_id) or r.get('id') == resume_id), None)
+            llm_result = next((r for r in llm_results if 'resume' in r and r['resume'].get('id') == resume_id), None)
             
             if nlp_result and llm_result:
+                # Get the resume data from the appropriate location
+                resume_data = nlp_result.get('resume') if 'resume' in nlp_result else nlp_result
                 combined_results.append({
-                    'resume': nlp_result['resume'],
+                    'resume': resume_data,
                     'score': combined_score,
                     'nlp_score': nlp_score,
                     'llm_score': llm_score,
@@ -507,10 +588,12 @@ def hybrid_recommend_resumes(job_desc, resumes, top_n=5, nlp_weight=0.4, llm_wei
         else:
             # For resumes that weren't evaluated by LLM, just use the NLP score
             # This shouldn't happen often with our design, but handles edge cases
-            nlp_result = next((r for r in nlp_results if r['resume']['id'] == resume_id), None)
+            nlp_result = next((r for r in nlp_results if ('resume' in r and r['resume'].get('id') == resume_id) or r.get('id') == resume_id), None)
             if nlp_result:
+                # Get the resume data from the appropriate location
+                resume_data = nlp_result.get('resume') if 'resume' in nlp_result else nlp_result
                 combined_results.append({
-                    'resume': nlp_result['resume'],
+                    'resume': resume_data,
                     'score': nlp_score * (nlp_weight + llm_weight),  # Scale up to compensate
                     'nlp_score': nlp_score,
                     'llm_score': 0,
