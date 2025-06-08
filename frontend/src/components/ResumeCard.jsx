@@ -354,9 +354,12 @@ const ResumeCard = ({ resume }) => {
                   🌍 Languages
                 </Typography>
                 <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                  {languages.map((lang, index) => (
-                    <DetailChip key={index}>{lang}</DetailChip>
-                  ))}
+                  {languages.map((lang, index) => {
+                    const display = typeof lang === 'string'
+                      ? lang
+                      : `${lang.name || ''}${lang.fluency ? ` - ${lang.fluency}` : ''}`;
+                    return <DetailChip key={index}>{display}</DetailChip>;
+                  })}
                 </Stack>
               </Box>
             )}

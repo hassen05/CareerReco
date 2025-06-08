@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import jsPDF from 'jspdf';
+
+// Using native browser PDF preview via iframe; removed react-pdf and worker imports
 import { 
   Container, Typography, Box, Avatar, Button, Paper, Grid, 
   IconButton, Card, Stack, List, ListItem, ListItemAvatar,
-  ListItemText, Divider, Chip, CircularProgress, Tooltip
+  ListItemText, Divider, Chip, CircularProgress, Tooltip,
+  Dialog, DialogTitle, DialogContent, DialogContentText, 
+  DialogActions, Backdrop, Modal, Fade
 } from '@mui/material';
-import { supabase } from '../supabaseClient';
-import ConfirmDialog from '../components/ConfirmDialog';
-import ErrorSnackbar from '../components/ErrorSnackbar';
-
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { 
   WorkOutline, CodeOutlined, LanguageOutlined,
   EditOutlined, DownloadOutlined, EmailOutlined,
@@ -17,6 +16,11 @@ import {
   Business, Visibility, DeleteOutlined, SchoolOutlined
 } from '@mui/icons-material';
 import { useTheme, alpha } from '@mui/material/styles';
+import { supabase } from '../supabaseClient';
+import ConfirmDialog from '../components/ConfirmDialog';
+import ErrorSnackbar from '../components/ErrorSnackbar';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const SectionHeader = ({ icon, title }) => (
   <Box sx={{ 
@@ -38,12 +42,20 @@ const SectionHeader = ({ icon, title }) => (
 
 function CandidateProfilePage() {
   const { user, loading: authLoading } = useAuth();
-  const [profile, setProfile] = useState(null);
-  const [resume, setResume] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  
+  // PDF preview states
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [pdfDataUrl, setPdfDataUrl] = useState(null);
+  const [numPdfPages, setNumPdfPages] = useState(1);
+  const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false);
   const [profileViews, setProfileViews] = useState([]);
   const [loadingViews, setLoadingViews] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [resume, setResume] = useState(null);
   
   // Store stable references to avoid unnecessary re-renders
   const profileRef = React.useRef(null);
@@ -55,13 +67,178 @@ function CandidateProfilePage() {
   const theme = useTheme();
   
   // Dialog & error state for destructive actions
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState('');
 
+  
+
   // Track if we've already logged the user info
   const loggedUserRef = React.useRef(false);
+  
+  // Resume content ref for PDF export
+  const resumeContentRef = useRef(null);
+  
+  // Function to generate a professional PDF resume
+  // previewMode=true creates a preview, false downloads directly
+  const generateResumePDF = async (previewMode = true) => {
+    if (!profile || !resume) {
+      setSnackbarMsg('No resume data available to export');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    try {
+      setPdfPreviewLoading(true);
+      
+      if (!profile || !resume) {
+        setSnackbarMsg('No profile or resume data available');
+        setSnackbarOpen(true);
+        return;
+      }
+      
+      // Create PDF document
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true,
+        author: profile.first_name + ' ' + profile.last_name,
+        subject: 'Resume',
+        keywords: 'resume, cv, job application',
+        creator: 'QuirkHire'
+      });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Set background color
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, pageWidth, pageHeight, 'F');
+      
+      // Layout variables
+      const sidebarWidth = 60; // mm
+      const headerHeight = 30; // mm
+      const contentX = sidebarWidth + 8;
+      const contentYStart = headerHeight + 8;
+      // Colors
+      const accentR = 125, accentG = 86, accentB = 227; // light purple-blue gradient accent
+      const headerR = 43, headerG = 45, headerB = 66; // dark header background
+      
+      // Sidebar background: light grey
+      doc.setFillColor(245,245,245);
+      doc.rect(0, 0, sidebarWidth, pageHeight, 'F');
+      
+      // Sidebar avatar and name
+      const sideAvatarSize = 25; // mm
+      const sideAvatarX = sidebarWidth/2 - sideAvatarSize/2;
+      const sideAvatarY = (headerHeight - sideAvatarSize) / 2;
+      if (profile.profile_picture) {
+        try {
+          const img = new Image(); img.crossOrigin = 'Anonymous'; img.src = profile.profile_picture;
+          await new Promise((rsl, rej) => { img.onload = rsl; img.onerror = rej; setTimeout(rsl, 3000); });
+          const canvas = document.createElement('canvas'); const px = 100; canvas.width = px; canvas.height = px;
+          const ctx = canvas.getContext('2d'); ctx.beginPath(); ctx.arc(px/2, px/2, px/2, 0, 2*Math.PI); ctx.closePath(); ctx.clip(); ctx.drawImage(img, 0, 0, px, px);
+          const url = canvas.toDataURL('image/png');
+          doc.addImage(url, 'PNG', sideAvatarX, sideAvatarY, sideAvatarSize, sideAvatarSize);
+        } catch {} 
+      }
+      doc.setFontSize(16); doc.setTextColor(0,0,0);
+      doc.text(`${profile.first_name} ${profile.last_name}`, sidebarWidth/2, sideAvatarY + sideAvatarSize + 4, { align: 'center' });
+
+      // Sidebar sections rendering
+      let sideY = sideAvatarY + sideAvatarSize + 8;
+      // Contact Section
+      const contacts = [];
+      if (profile.email) contacts.push(`Email: ${profile.email}`);
+      if (profile.phone) contacts.push(`Phone: ${profile.phone}`);
+      if (profile.linkedin) contacts.push(`LinkedIn: ${profile.linkedin}`);
+      const contactBoxHeight = 8 + contacts.length * 6 + 4;
+      doc.setFillColor(headerR, headerG, headerB);
+      doc.rect(0, sideY - 2, sidebarWidth, contactBoxHeight, 'F');
+      doc.setTextColor(255,255,255); doc.setFontSize(12);
+      doc.text('Contact', 5, sideY + 4);
+      sideY += 8; doc.setFontSize(10);
+      contacts.forEach(c => { doc.text(c, 5, sideY); sideY += 6; });
+      sideY += 8;
+      // Helper for other sections
+      const drawSec = (title, items) => {
+        doc.setFillColor(headerR, headerG, headerB);
+        doc.rect(0, sideY - 2, sidebarWidth, 8, 'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(12);
+        doc.text(title, 5, sideY + 4);
+        sideY += 8; doc.setTextColor(0,0,0); doc.setFontSize(10);
+        items.forEach(i => { doc.text(`• ${i}`, 5, sideY); sideY += 6; });
+        sideY += 8;
+      };
+      drawSec('Skills', parseField(resume.skills || []));
+      drawSec('Languages', parseField(resume.languages || []).map(l => typeof l==='string'?l:`${l.name||''} - ${l.fluency||''}`));
+      drawSec('Certifications', parseField(resume.certifications || []));
+
+      // Main content area
+      let mainY = contentYStart;
+      doc.setTextColor(0,0,0);
+      doc.setFontSize(16);
+      doc.text('Professional Summary', contentX, mainY);
+      mainY += 8;
+      doc.setFontSize(11);
+      if (profile.bio) { doc.text(profile.bio, contentX, mainY, { maxWidth: pageWidth - contentX - 14 }); mainY += 12; }
+      
+      // Education
+      if (resume.education?.length) {
+        doc.setFontSize(16);
+        doc.text('Education', contentX, mainY);
+        mainY += 8;
+        doc.setFontSize(11);
+        parseField(resume.education).forEach(edu => {
+          doc.text(`• ${edu.degree} @ ${edu.institution}`, contentX, mainY); mainY += 6;
+        });
+        mainY += 6;
+      }
+      
+      // Experience
+      if (resume.experience?.length) {
+        doc.setFontSize(16);
+        doc.text('Experience', contentX, mainY); mainY += 8;
+        doc.setFontSize(11);
+        parseField(resume.experience).forEach(exp => {
+          doc.text(`• ${exp.position} at ${exp.company}`, contentX, mainY); mainY += 6;
+          // description truncated
+          const lines = doc.splitTextToSize(exp.description, pageWidth - contentX - 14);
+          doc.text(lines, contentX + 4, mainY); mainY += lines.length * 6;
+        });
+      }
+
+      // Footer note on last page
+      const totalPages = doc.internal.getNumberOfPages();
+      doc.setPage(totalPages);
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Generated by QuirkHire', 14, pageHeight - 10);
+
+      if (previewMode) {
+        // Generate data URL for preview
+        const pdfDataUri = doc.output('datauristring');
+        setPdfDataUrl(pdfDataUri);
+        setPdfPreviewOpen(true);
+        setSnackbarMsg('PDF preview ready!');
+        setSnackbarOpen(true);
+      } else {
+        // Save the PDF directly
+        doc.save(`${profile.first_name}_${profile.last_name}_Resume.pdf`);
+        
+        // Success message
+        setSnackbarMsg('PDF downloaded successfully!');
+        setSnackbarOpen(true);
+      }
+      
+      setPdfPreviewLoading(false);
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      setSnackbarMsg(`Error generating PDF: ${error.message}`);
+      setSnackbarOpen(true);
+      setPdfPreviewLoading(false);
+    }
+  };
 
   // Debug user object - only log once on mount
   useEffect(() => {
@@ -577,7 +754,7 @@ function CandidateProfilePage() {
                     <IconButton 
                       aria-label="linkedin" 
                       component="a" 
-                      href={profile.linkedin}
+                      href={profile.linkedin.startsWith('http') ? profile.linkedin : `https://${profile.linkedin}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       color="primary"
@@ -596,7 +773,7 @@ function CandidateProfilePage() {
                     <IconButton 
                       aria-label="github" 
                       component="a" 
-                      href={profile.github}
+                      href={profile.github.startsWith('http') ? profile.github : `https://${profile.github}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       color="primary"
@@ -695,7 +872,8 @@ function CandidateProfilePage() {
                 disableElevation
                 color="secondary"
                 startIcon={<DownloadOutlined />}
-                onClick={() => window.print()}
+                onClick={() => generateResumePDF(true)}
+                disabled={pdfPreviewLoading}
                 size="medium"
                 sx={{ 
                   borderRadius: 2,
@@ -767,9 +945,36 @@ function CandidateProfilePage() {
                 <Card sx={{ mb: 4, p: 3, borderRadius: 5, boxShadow: 2 }}>
                   <SectionHeader icon={<LanguageOutlined />} title="Languages" />
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {parseField(resume.languages).map((lang, i) => (
-                      <Chip key={i} label={lang} color="secondary" sx={{ mb: 1 }} />
-                    ))}
+                    {parseField(resume.languages).map((lang, i) => {
+                      // Handle both string format and object format with name/fluency
+                      let displayText = '';
+                      let langObj = null;
+                      
+                      if (typeof lang === 'string') {
+                        displayText = lang;
+                      } else if (typeof lang === 'object' && lang !== null) {
+                        langObj = lang;
+                        const langName = lang.name || lang.language || '';
+                        const fluency = lang.fluency || lang.level || '';
+                        
+                        if (langName) {
+                          displayText = fluency ? `${langName} - ${fluency}` : langName;
+                        } else {
+                          return null; // Skip invalid language entries
+                        }
+                      } else {
+                        return null; // Skip invalid language entries
+                      }
+                      
+                      return (
+                        <Chip 
+                          key={i} 
+                          label={displayText} 
+                          color="secondary" 
+                          sx={{ mb: 1 }} 
+                        />
+                      );
+                    })}
                   </Box>
                 </Card>
               )}
@@ -806,7 +1011,7 @@ function CandidateProfilePage() {
                   <Stack spacing={2} divider={<Divider flexItem />}>
                     {parseField(resume.education).map((edu, i) => (
                       <Box key={i}>
-                        <Typography variant="subtitle1" fontWeight={600}>{edu.degree} @ {edu.school}</Typography>
+                        <Typography variant="subtitle1" fontWeight={600}>{edu.degree} @ {edu.institution}</Typography>
                         <Typography variant="body2" color="text.secondary">{edu.start_date} - {edu.end_date || 'Present'}</Typography>
                         <Typography variant="body2" sx={{ mt: 0.5 }}>{edu.description}</Typography>
                       </Box>
@@ -838,16 +1043,104 @@ function CandidateProfilePage() {
         </Grid>
       </Grid>
       {/* ConfirmDialog and Snackbar are rendered at the end of the main container */}
-      <ConfirmDialog
+      <ConfirmDialog 
         open={confirmOpen}
-        title={'Delete Resume'}
-        description={'Are you sure you want to permanently delete your resume? This action cannot be undone.'}
+        title="Delete Resume"
+        content="Are you sure you want to delete your resume? This action cannot be undone."
         onConfirm={handleDeleteResume}
         onCancel={() => setConfirmOpen(false)}
-        confirmText="Delete"
-        cancelText="Cancel"
-        loading={deleteLoading}
       />
+      
+      {/* PDF Preview Modal */}
+      <Modal
+        open={pdfPreviewOpen}
+        onClose={() => setPdfPreviewOpen(false)}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{ timeout: 500 }}
+      >
+        <Fade in={pdfPreviewOpen}>
+          <Box sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '90%',
+            maxWidth: '900px',
+            maxHeight: '90vh',
+            bgcolor: 'background.paper',
+            border: '1px solid #e0e0e0',
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 4,
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h5" component="h2">
+                Resume Preview
+              </Typography>
+              <Box>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<DownloadOutlined />}
+                  onClick={() => {
+                    setPdfPreviewOpen(false);
+                    generateResumePDF(false);
+                  }}
+                  sx={{ mr: 2 }}
+                >
+                  Download PDF
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => setPdfPreviewOpen(false)}
+                >
+                  Close
+                </Button>
+              </Box>
+            </Box>
+            
+            <Box sx={{ 
+              flex: 1, 
+              overflow: 'auto', 
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              bgcolor: alpha('#f5f5f5', 0.7),
+              p: 2,
+              borderRadius: 1,
+              minHeight: '300px',
+              '& .react-pdf__Document': {
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+              },
+              '& .react-pdf__Page': {
+                maxWidth: '100%',
+                boxShadow: '0 0 10px rgba(0,0,0,0.15)',
+                mb: 2,
+                bgcolor: '#fff'
+              }
+            }}>
+              {pdfDataUrl ? (
+                <iframe
+                  src={pdfDataUrl}
+                  title="PDF Preview"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 'none', flex: 1 }}
+                />
+              ) : (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+                  <CircularProgress />
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </Fade>
+      </Modal>
       <ErrorSnackbar
         open={snackbarOpen}
         message={snackbarMsg}

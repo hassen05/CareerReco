@@ -46,28 +46,32 @@ const HomePage = () => {
 
   const testimonials = [
     {
-      quote: "QuirkHire has completely transformed our hiring process. The AI matching is incredibly accurate and has saved us countless hours.",
+      quote: "QuirkHire has completely transformed our hiring process. The AI matching is incredibly accurate and has saved us countless hours of screening candidates.",
       name: "John Doe",
-      role: "HR Manager, TechCorp",
-      avatar: "/path/to/avatar1.jpg"
+      role: "HR Manager",
+      company: "TechCorp",
+      companyLogo: "https://logo.clearbit.com/microsoft.com"
     },
     {
-      quote: "As a job seeker, QuirkHire helped me find the perfect role that matched my skills and career goals.",
+      quote: "As a job seeker, QuirkHire helped me find the perfect role that matched my skills and career goals. The platform understood my experience like no other.",
       name: "Jane Smith",
       role: "Software Engineer",
-      avatar: "/path/to/avatar2.jpg"
+      company: "Innovate Solutions",
+      companyLogo: "https://logo.clearbit.com/adobe.com"
     },
     {
-      quote: "The platform's intuitive interface and powerful matching algorithm have made recruitment a breeze for our team on QuirkHire.",
+      quote: "The platform's intuitive interface and powerful matching algorithm have made recruitment a breeze for our entire talent acquisition team.",
       name: "Michael Johnson",
       role: "Talent Acquisition Lead",
-      avatar: "/path/to/avatar3.jpg"
+      company: "Global Enterprises",
+      companyLogo: "https://logo.clearbit.com/salesforce.com"
     },
     {
-      quote: "I was amazed by how quickly QuirkHire connected me with relevant job opportunities. It's a game-changer!",
+      quote: "I was amazed by how quickly QuirkHire connected me with relevant job opportunities. Within a week, I had three interviews with perfect-match companies!",
       name: "Sarah Williams",
       role: "Data Scientist",
-      avatar: "/path/to/avatar4.jpg"
+      company: "Analytics Co",
+      companyLogo: "https://logo.clearbit.com/ibm.com"
     }
   ];
 
@@ -455,52 +459,54 @@ const HomePage = () => {
                   alignItems: 'center',
                   gap: 4,
                   p: { md: 4 },
-                  position: 'relative'
+                  position: 'relative',
+                  maxWidth: '1000px',
+                  mx: 'auto'
                 }}>
-                  {/* Content */}
+                  {/* Testimonial Card with Modern Design */}
                   <Box sx={{
                     flex: 1,
                     position: 'relative',
-                    p: { xs: 2, md: 4 },
+                    p: { xs: 3, md: 5 },
                     bgcolor: 'background.paper',
                     borderRadius: 4,
-                    boxShadow: '0 32px 64px rgba(0,0,0,0.08)',
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.08)',
+                    border: '1px solid rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
                     '&::before': {
                       content: '""',
                       position: 'absolute',
-                      top: 40,
-                      left: { md: -24 },
-                      width: { md: 48 },
-                      height: { md: 48 },
-                      bgcolor: 'background.paper',
-                      transform: 'rotate(45deg)',
-                      zIndex: -1
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '6px',
+                      background: 'linear-gradient(90deg, #553d8e 0%, #9ba2c2 100%)'
                     }
                   }}>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 2,
-                      mb: 3 
+                    <Typography variant="h5" sx={{
+                      fontWeight: 400,
+                      color: 'text.primary',
+                      lineHeight: 1.6,
+                      mb: 4,
+                      fontStyle: 'italic',
+                      position: 'relative',
+                      px: 2
                     }}>
-                      <Box sx={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 2,
-                        bgcolor: 'primary.main',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0
-                      }}>
-                        <Typography variant="h4" sx={{ 
-                          color: 'white', 
-                          lineHeight: 1 
-                        }}>
-                          “
-                        </Typography>
-                      </Box>
-                      <Box>
+                      "{testimonial.quote}"
+                    </Typography>
+                    
+                    {/* Footer with Avatar, Name, Role, and Company */}
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      mt: 'auto',
+                      pt: 3,
+                      borderTop: '1px solid rgba(0,0,0,0.06)'
+                    }}>
+                      <Box sx={{ flex: 1 }}>
                         <Typography variant="h6" sx={{ 
                           fontWeight: 700,
                           color: 'text.primary',
@@ -510,32 +516,37 @@ const HomePage = () => {
                         </Typography>
                         <Typography variant="body2" sx={{ 
                           color: 'text.secondary',
-                          fontSize: '0.875rem'
+                          fontSize: '0.875rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5
                         }}>
-                          {testimonial.role}
+                          {testimonial.role} • {testimonial.company}
                         </Typography>
                       </Box>
+                      {/* Company Logo */}
+                      <Box sx={{
+                        width: 40,
+                        height: 40,
+                        p: 1,
+                        borderRadius: 2,
+                        bgcolor: 'background.default',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Box 
+                          component="img"
+                          src={testimonial.companyLogo}
+                          alt={testimonial.company}
+                          sx={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain'
+                          }}
+                        />
+                      </Box>
                     </Box>
-
-                    <Typography variant="h5" sx={{
-                      fontWeight: 400,
-                      color: 'text.primary',
-                      lineHeight: 1.6,
-                      position: 'relative',
-                      pl: 6,
-                      '&::before': {
-                        content: '"“"',
-                        position: 'absolute',
-                        left: 0,
-                        top: -8,
-                        fontSize: '4rem',
-                        color: 'primary.light',
-                        fontFamily: 'serif',
-                        lineHeight: 1
-                      }
-                    }}>
-                      {testimonial.quote}
-                    </Typography>
                   </Box>
                 </Box>
               </motion.div>

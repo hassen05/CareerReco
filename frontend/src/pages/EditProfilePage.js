@@ -99,6 +99,13 @@ function EditProfilePage() {
     }
   };
 
+  // Function to ensure URLs have a protocol prefix
+  const ensureProtocol = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `https://${url}`;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
@@ -115,10 +122,10 @@ function EditProfilePage() {
             phone: profile.phone,
             profile_picture: profile.profile_picture,
             bio: profile.bio,
-            website: profile.website,
-            linkedin: profile.linkedin,
-            github: profile.github,
-            twitter: profile.twitter,
+            website: ensureProtocol(profile.website),
+            linkedin: ensureProtocol(profile.linkedin),
+            github: ensureProtocol(profile.github),
+            twitter: ensureProtocol(profile.twitter),
             updated_at: new Date().toISOString()
           })
           .eq('id', user.id);

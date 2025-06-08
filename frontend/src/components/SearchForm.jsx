@@ -165,27 +165,28 @@ const SearchForm = ({ onSubmit, loading }) => {
                 value={recommendationType}
                 onChange={(e) => setRecommendationType(e.target.value)}
               >
-                <Tooltip title="Traditional NLP-based recommendation using sentence embeddings">
-                  <FormControlLabel 
-                    value="traditional" 
-                    control={<Radio />} 
-                    label={<Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <PsychologyAltIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
-                      <Typography variant="body2">Traditional NLP</Typography>
-                    </Box>} 
-                  />
-                </Tooltip>
-                
                 <Tooltip title="Combines NLP and LLM for more comprehensive recommendations">
                   <FormControlLabel 
                     value="hybrid" 
                     control={<Radio />} 
                     label={<Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <SmartToyIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
-                      <Typography variant="body2">Hybrid (NLP+LLM)</Typography>
+                      <Typography variant="body2">Hybrid (Recommended)</Typography>
                     </Box>} 
                   />
                 </Tooltip>
+                <Tooltip title="Traditional NLP-based recommendation using sentence embeddings">
+                  <FormControlLabel 
+                    value="traditional" 
+                    control={<Radio />} 
+                    label={<Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PsychologyAltIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                      <Typography variant="body2">Quick Match</Typography>
+                    </Box>} 
+                  />
+                </Tooltip>
+                
+      
                 
                 <Tooltip title="Pure LLM-based recommendation with deep reasoning">
                   <FormControlLabel 
@@ -193,7 +194,7 @@ const SearchForm = ({ onSubmit, loading }) => {
                     control={<Radio />} 
                     label={<Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <SmartToyIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
-                      <Typography variant="body2">LLM Only</Typography>
+                      <Typography variant="body2">Deep Match</Typography>
                     </Box>} 
                   />
                 </Tooltip>

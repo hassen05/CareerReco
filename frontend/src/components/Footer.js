@@ -31,7 +31,7 @@ const Footer = () => {
           {/* Company Info */}
           <Grid item xs={12} md={4}>
             <Typography variant="h6" gutterBottom>
-              Resume Recommender
+              QuirkHire
             </Typography>
             <Typography variant="body2" sx={{ mt: 2 }}>
               Revolutionizing the way recruiters find the perfect candidates through AI-powered resume matching.
@@ -75,13 +75,13 @@ const Footer = () => {
               <Stack direction="row" spacing={1} alignItems="center">
                 <EmailIcon />
                 <Typography variant="body2">
-                  support@resumerecommender.com
+                  support@quirkhire.com
                 </Typography>
               </Stack>
               <Stack direction="row" spacing={1} alignItems="center">
                 <PhoneIcon />
                 <Typography variant="body2">
-                  +1 (555) 123-4567
+                  +123456789
                 </Typography>
               </Stack>
             </Stack>
@@ -98,7 +98,7 @@ const Footer = () => {
             borderTop: '1px solid rgba(255, 255, 255, 0.1)'
           }}
         >
-          © {new Date().getFullYear()} Resume Recommender. All rights reserved.
+          © {new Date().getFullYear()} QuirkHire. All rights reserved.
         </Typography>
       </Container>
     </StyledFooter>

@@ -98,19 +98,34 @@ function RecruiterProfilePage() {
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {profile.website && (
-                  <Link href={profile.website} target="_blank" rel="noopener noreferrer" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Link 
+                    href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    sx={{ display: 'flex', alignItems: 'center' }}
+                  >
                     <Language sx={{ verticalAlign: 'middle', mr: 1 }} />
                     Website
                   </Link>
                 )}
                 {profile.linkedin && (
-                  <Link href={profile.linkedin} target="_blank" rel="noopener noreferrer" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Link 
+                    href={profile.linkedin.startsWith('http') ? profile.linkedin : `https://${profile.linkedin}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    sx={{ display: 'flex', alignItems: 'center' }}
+                  >
                     <LinkedIn sx={{ verticalAlign: 'middle', mr: 1 }} />
                     LinkedIn
                   </Link>
                 )}
                 {profile.twitter && (
-                  <Link href={profile.twitter} target="_blank" rel="noopener noreferrer" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Link 
+                    href={profile.twitter.startsWith('http') ? profile.twitter : `https://${profile.twitter}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    sx={{ display: 'flex', alignItems: 'center' }}
+                  >
                     <Twitter sx={{ verticalAlign: 'middle', mr: 1 }} />
                     Twitter
                   </Link>

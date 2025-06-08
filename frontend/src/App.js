@@ -6,7 +6,6 @@ import theme from './styles/theme';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import ResumeRecommender from './pages/ResumeRecommender';
-import UploadPage from './pages/UploadPage';
 import Footer from './components/Footer';
 import AboutUs from './pages/AboutUs';
 import RoleSelection from './pages/RoleSelection';
@@ -69,7 +68,7 @@ function App() {
   }
 />
 
-          <Route path="/upload" element={<UploadPage />} />
+          
           <Route path="/about" element={<AboutUs />} />
           <Route path="/signup" element={<RoleSelection />} />
           <Route path="/signup/candidate" element={<CandidateSignup />} />
