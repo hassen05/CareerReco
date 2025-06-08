@@ -23,7 +23,6 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 # Lazy-load models with simple caching to avoid repeated loading
 _nlp = None
-_model = None
 
 def get_nlp():
     global _nlp
@@ -32,24 +31,13 @@ def get_nlp():
         _nlp = spacy.load("en_core_web_sm")
     return _nlp
 
+@lru_cache(maxsize=1)
 def get_sentence_transformer():
-    global _model
-    if _model is None:
-        try:
-            # Load with explicit device and reduced memory footprint
-            _model = SentenceTransformer(
-                "all-MiniLM-L6-v2",
-                device="cpu",
-                use_auth_token=False
-            )
-            # Reduce memory usage
-            _model.max_seq_length = 128  
-            _model._target_device = "cpu"
-            logger.info("SentenceTransformer loaded with optimized settings")
-        except Exception as e:
-            logger.error(f"Error loading sentence transformer: {e}")
-            raise
-    return _model
+    """Instantiate SentenceTransformer once per process."""
+    model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+    # Reduce memory usage
+    model.max_seq_length = 128
+    return model
 
 # Configuration - Adjust these weights based on importance
 WEIGHTS = {
