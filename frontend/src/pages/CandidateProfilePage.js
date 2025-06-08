@@ -13,7 +13,7 @@ import {
   WorkOutline, CodeOutlined, LanguageOutlined,
   EditOutlined, DownloadOutlined, EmailOutlined,
   PhoneOutlined, LinkedIn, GitHub, CardMembershipOutlined,
-  Business, Visibility, DeleteOutlined, SchoolOutlined
+  Business, Visibility, DeleteOutlined, SchoolOutlined, CommentOutlined
 } from '@mui/icons-material';
 import { useTheme, alpha } from '@mui/material/styles';
 import { supabase } from '../supabaseClient';
@@ -21,6 +21,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import ErrorSnackbar from '../components/ErrorSnackbar';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { TextField } from '@mui/material';
 
 const SectionHeader = ({ icon, title }) => (
   <Box sx={{ 
@@ -151,7 +152,19 @@ function CandidateProfilePage() {
       const contacts = [];
       if (profile.email) contacts.push(`Email: ${profile.email}`);
       if (profile.phone) contacts.push(`Phone: ${profile.phone}`);
-      if (profile.linkedin) contacts.push(`LinkedIn: ${profile.linkedin}`);
+      if (profile.website) contacts.push(`Website: ${profile.website}`);
+
+      if (profile.linkedin) {
+        const liUrl = profile.linkedin.replace(/\/$/, '');
+        const liHandle = liUrl.substring(liUrl.lastIndexOf('/') + 1);
+        contacts.push(`LinkedIn: @${liHandle}`);
+      }
+      if (profile.github) {
+        const ghUrl = profile.github.replace(/\/$/, '');
+        const ghHandle = ghUrl.substring(ghUrl.lastIndexOf('/') + 1);
+        contacts.push(`GitHub: @${ghHandle}`);
+      }
+      
       const contactBoxHeight = 8 + contacts.length * 6 + 4;
       doc.setFillColor(headerR, headerG, headerB);
       doc.rect(0, sideY - 2, sidebarWidth, contactBoxHeight, 'F');
@@ -166,9 +179,20 @@ function CandidateProfilePage() {
         doc.rect(0, sideY - 2, sidebarWidth, 8, 'F');
         doc.setTextColor(255,255,255); doc.setFontSize(12);
         doc.text(title, 5, sideY + 4);
-        sideY += 8; doc.setTextColor(0,0,0); doc.setFontSize(10);
-        items.forEach(i => { doc.text(`• ${i}`, 5, sideY); sideY += 6; });
-        sideY += 8;
+        // Move below header
+        sideY += 12;
+        doc.setTextColor(0,0,0); doc.setFontSize(10);
+        const maxTextWidth = sidebarWidth - 4;
+        items.forEach(i => {
+          // Wrap long lines
+          const lines = doc.splitTextToSize(`• ${i}`, maxTextWidth);
+          lines.forEach(line => {
+            doc.text(line, 5, sideY);
+            sideY += 5;
+          });
+        });
+        // Extra spacing after items
+        sideY += 12;
       };
       drawSec('Skills', parseField(resume.skills || []));
       drawSec('Languages', parseField(resume.languages || []).map(l => typeof l==='string'?l:`${l.name||''} - ${l.fluency||''}`));
@@ -587,6 +611,10 @@ function CandidateProfilePage() {
     );
   };
 
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
   if (loading) return (
     <Box sx={{ 
       display: 'flex', 
@@ -908,6 +936,22 @@ function CandidateProfilePage() {
               >
                 Delete Resume
               </Button>
+              <Button
+                variant="outlined"
+                startIcon={<CommentOutlined />}
+                onClick={() => setReviewModalOpen(true)}
+                size="medium"
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontSize: '0.9rem',
+                  px: 2,
+                  py: 0.75,
+                }}
+                aria-label="Reviews"
+              >
+                Reviews
+              </Button>
             </>
           )}
         </Card>
@@ -1146,6 +1190,36 @@ function CandidateProfilePage() {
         message={snackbarMsg}
         onClose={() => setSnackbarOpen(false)}
       />
+      {/* Feedback Modal */}
+      <Dialog open={reviewModalOpen} onClose={() => setReviewModalOpen(false)}>
+        <DialogTitle>Your opinion matters</DialogTitle>
+        <DialogContent>
+          <Typography>Please help us improve by leaving your feedback below:</Typography>
+          <TextField
+            value={reviewText}
+            onChange={e => setReviewText(e.target.value)}
+            multiline
+            fullWidth
+            minRows={3}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReviewModalOpen(false)}>Cancel</Button>
+          <Button onClick={async () => {
+              if (!reviewText.trim()) return;
+              setReviewSubmitting(true);
+              const insertObj = { content: reviewText, author_candidate_id: user.id, role: 'candidate' };
+              const { error } = await supabase.from('reviews').insert([insertObj]);
+              setReviewSubmitting(false);
+              setReviewModalOpen(false);
+              setReviewText('');
+              setSnackbarMsg(error ? error.message : 'Thanks for your feedback!');
+              setSnackbarOpen(true);
+            }} disabled={reviewSubmitting}
+          >Submit</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

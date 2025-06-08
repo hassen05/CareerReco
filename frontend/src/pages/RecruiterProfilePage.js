@@ -11,13 +11,19 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { Business, Email, Phone, EditOutlined, Language, LinkedIn, Twitter } from '@mui/icons-material';
+import { Business, Email, Phone, EditOutlined, Language, LinkedIn, Twitter, CommentOutlined } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
 
 function RecruiterProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -140,9 +146,49 @@ function RecruiterProfilePage() {
             >
               Edit Profile
             </Button>
+            <Button
+              variant="outlined"
+              startIcon={<CommentOutlined />}
+              onClick={() => setReviewModalOpen(true)}
+              size="medium"
+              sx={{ borderRadius:2, textTransform:'none', fontSize:'0.9rem', px:2, py:0.75, ml:1 }}
+            >
+              Feedback
+            </Button>
           </Grid>
         </Grid>
       </Paper>
+      {/* Feedback Modal */}
+      <Dialog open={reviewModalOpen} onClose={() => setReviewModalOpen(false)}>
+        <DialogTitle>Your opinion matters</DialogTitle>
+        <DialogContent>
+          <Typography>Please share your feedback:</Typography>
+          <TextField
+            multiline
+            fullWidth
+            minRows={3}
+            value={reviewText}
+            onChange={e => setReviewText(e.target.value)}
+            sx={{ mt:2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReviewModalOpen(false)}>Cancel</Button>
+          <Button
+            disabled={reviewSubmitting}
+            onClick={async () => {
+              if (!reviewText.trim()) return;
+              setReviewSubmitting(true);
+              const insertObj = { content: reviewText, author_recruiter_id: user.id, role: 'recruiter' };
+              const { error: insertErr } = await supabase.from('reviews').insert([insertObj]);
+              setReviewSubmitting(false);
+              setReviewText('');
+              setReviewModalOpen(false);
+              if (insertErr) setError(insertErr.message);
+            }}
+          >Submit</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

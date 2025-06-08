@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage';
 import ResumeRecommender from './pages/ResumeRecommender';
 import Footer from './components/Footer';
 import AboutUs from './pages/AboutUs';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import RoleSelection from './pages/RoleSelection';
 import CandidateSignup from './pages/CandidateSignup';
 import RecruiterSignup from './pages/RecruiterSignup';
@@ -31,6 +32,7 @@ import NotFound from './pages/NotFound';
 import ServerError from './pages/ServerError';
 import SettingsPage from './pages/SettingsPage';
 import AdminResumeDashboard from './pages/AdminResumeDashboard';
+import ReviewsPage from './pages/ReviewsPage';
 
 function App() {
   const location = useLocation();
@@ -70,6 +72,7 @@ function App() {
 
           
           <Route path="/about" element={<AboutUs />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/signup" element={<RoleSelection />} />
           <Route path="/signup/candidate" element={<CandidateSignup />} />
           <Route path="/signup/recruiter" element={<RecruiterSignup />} />
@@ -148,7 +151,20 @@ function App() {
             </ProtectedRoute>
           }
         />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route
+            path="/settings"
+            element={
+              <SettingsPage />
+            }
+          />
+          <Route
+            path="/reviews"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <ReviewsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/500" element={<ServerError />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

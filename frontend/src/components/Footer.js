@@ -59,8 +59,6 @@ const Footer = () => {
             </Typography>
             <Stack spacing={1}>
               <FooterLink href="/">Home</FooterLink>
-              <FooterLink href="/recommend">Recommend</FooterLink>
-              <FooterLink href="/upload">Upload Resume</FooterLink>
               <FooterLink href="/about">About Us</FooterLink>
               <FooterLink href="/privacy">Privacy Policy</FooterLink>
             </Stack>
@@ -98,7 +96,7 @@ const Footer = () => {
             borderTop: '1px solid rgba(255, 255, 255, 0.1)'
           }}
         >
-          © {new Date().getFullYear()} QuirkHire. All rights reserved.
+          {new Date().getFullYear()} QuirkHire. All rights reserved.
         </Typography>
       </Container>
     </StyledFooter>

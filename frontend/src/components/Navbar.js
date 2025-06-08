@@ -74,7 +74,8 @@ const Navbar = () => {
       if (userRole === 'admin') {
         basicLinks.push(
           { label: "Admin Dashboard",  path: "/admin-dashboard"  },
-          { label: "Resume Dashboard", path: "/admin-resume" }
+          { label: "Resume Dashboard", path: "/admin-resume" },
+          { label: "Reviews",         path: "/reviews" }
         );
       }
     }
