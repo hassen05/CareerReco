@@ -266,24 +266,24 @@ The project was developed iteratively through multiple sprints, each focusing on
 ```mermaid
 gantt
     title QuirkHire Development Timeline
-    dateFormat  YYYY-MM-DD
-    section Sprint 1
-    Foundation & Basic NLP Integration    :s1, 2025-01-06, 2w
-    section Sprint 2
+    axisFormat Week %U
+    section Sprint 1 (2 weeks)
+    Foundation & Basic NLP Integration    :s1, 0, 2w
+    section Sprint 2 (2 weeks)
     Enhanced NLP & UI                     :s2, after s1, 2w
-    section Sprint 3
+    section Sprint 3 (3 weeks)
     LLM Integration & Hybrid Approach     :s3, after s2, 3w
-    section Sprint 4
+    section Sprint 4 (2 weeks)
     Advanced Features & Refinement        :s4, after s3, 2w
-    section Sprint 5
+    section Sprint 5 (1 week)
     Testing, Documentation & Deployment   :s5, after s4, 1w
     section Milestones
-    Project Kickoff                       :milestone, m1, 2025-01-06, 0d
-    Basic NLP Functionality Complete      :milestone, m2, 2025-01-17, 0d
-    Enhanced UI Complete                  :milestone, m3, 2025-01-31, 0d
-    LLM Integration Complete              :milestone, m4, 2025-02-21, 0d
-    Feature Complete                      :milestone, m5, 2025-03-07, 0d
-    Project Deployment                    :milestone, m6, 2025-03-14, 0d
+    Project Kickoff                       :milestone, m1, 0, 0d
+    Basic NLP Functionality Complete      :milestone, m2, after s1, 0d
+    Enhanced UI Complete                 :milestone, m3, after s2, 0d
+    LLM Integration Complete             :milestone, m4, after s3, 0d
+    Feature Complete                     :milestone, m5, after s4, 0d
+    Project Deployment                   :milestone, m6, after s5, 0d
 ```
 
 ## Technical Architecture

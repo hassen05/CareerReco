@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RecommendAPI, ProfileAPI, GenerateEmbeddingAPI, LLMRecommendAPI, LandingPageView, TestRecommenderView
+from .views import RecommendAPI, ProfileAPI, GenerateEmbeddingAPI, LLMRecommendAPI, PDFResumeParseAPI, LandingPageView, TestRecommenderView
 from .auth_views import SignUpView, LoginView
 
 urlpatterns = [
@@ -11,4 +11,5 @@ urlpatterns = [
     path('auth/login/', LoginView.as_view(), name='login'),
     path('profile/<str:user_id>/', ProfileAPI.as_view(), name='profile-api'),
     path('generate-embedding/', GenerateEmbeddingAPI.as_view(), name='generate-embedding'),
+    path('parse-resume/', PDFResumeParseAPI.as_view(), name='parse-resume'),
 ]

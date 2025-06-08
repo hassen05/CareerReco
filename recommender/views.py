@@ -1,5 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from .utils import load_resumes, recommend_resumes, enhance_resume_embedding, extract_keywords_and_requirements
 from .serializers import ResumeSerializer
 import logging
@@ -14,6 +15,7 @@ import numpy as np
 import base64
 from .llm_recommender import recommend_resumes_llm, hybrid_recommend_resumes
 from django.views.generic import TemplateView
+from .pdf_utils import extract_text_from_pdf
 
 logger = logging.getLogger('recommender')
 
@@ -289,6 +291,37 @@ class GenerateEmbeddingAPI(APIView):
 
 class LandingPageView(TemplateView):
     template_name = "landing.html"
+
+class PDFResumeParseAPI(APIView):
+    """API endpoint for parsing PDF resumes using LLM"""
+    parser_classes = (MultiPartParser, FormParser)
+    
+    def post(self, request):
+        try:
+            if 'pdf_file' not in request.FILES:
+                return Response({"error": "No PDF file provided"}, status=400)
+                
+            pdf_file = request.FILES['pdf_file']
+            if not pdf_file.name.endswith('.pdf'):
+                return Response({"error": "File must be a PDF"}, status=400)
+            
+            # Extract text from PDF
+            logger.info(f"Processing PDF resume: {pdf_file.name}")
+            extracted_text = extract_text_from_pdf(pdf_file)
+            
+            if not extracted_text or len(extracted_text.strip()) < 100:  # Sanity check
+                return Response({"error": "Could not extract meaningful text from PDF"}, status=400)
+            
+            # The text extraction was successful, return it to the frontend
+            # The frontend will use DeepSeek to parse the text into structured resume data
+            return Response({
+                "extracted_text": extracted_text,
+                "message": "Text successfully extracted from PDF"
+            })
+            
+        except Exception as e:
+            logger.error(f"Error parsing PDF resume: {str(e)}")
+            return Response({"error": str(e)}, status=500)
 
 class TestRecommenderView(TemplateView):
     template_name = "test.html"

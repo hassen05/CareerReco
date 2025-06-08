@@ -148,7 +148,19 @@ def format_resume_for_llm(resume):
     # Add languages
     languages = resume.get('languages', [])
     if languages and isinstance(languages, list) and len(languages) > 0:
-        sections.append("Languages: " + ", ".join(languages))
+        lang_strs = []
+        for lang in languages:
+            if isinstance(lang, str):
+                lang_strs.append(lang)
+            elif isinstance(lang, dict):
+                name = lang.get('name', '')
+                fluency = lang.get('fluency')
+                if fluency:
+                    lang_strs.append(f"{name} - {fluency}")
+                else:
+                    lang_strs.append(name)
+        if lang_strs:
+            sections.append("Languages: " + ", ".join(lang_strs))
     
     # Add certifications
     certifications = resume.get('certifications', [])
@@ -383,7 +395,7 @@ def recommend_resumes_llm(job_desc, resumes, top_n=5, model_name=DEFAULT_LLM_MOD
         job_desc (str): The job description text
         resumes (list): List of resume dictionaries
         top_n (int): Number of top recommendations to return
-        model_name (str): Name of the LLM model to use (llama4 or nemotron)
+        model_name (str): Name of the LLM model to use
         
     Returns:
         list: Top N resume recommendations with scores and explanations

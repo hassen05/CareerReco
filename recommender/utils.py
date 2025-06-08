@@ -414,7 +414,7 @@ def get_certification_score(resume_certs, job_description, job_certs=None):
         cert_matches = []
         for r_cert in resume_certs:
             for j_cert in job_certs:
-                if r_cert.lower() in j_cert.lower() or j_cert.lower() in r_cert.lower():
+                if r_cert.lower() == j_cert.lower():
                     cert_matches.append(r_cert)
                     match_reasons.append(f"Has required certification: {r_cert}")
                     break
@@ -526,22 +526,27 @@ def recommend_resumes(job_desc, resumes, top_n=5):
                     
                 score_components['certifications'] = cert_score
                 
-                # 6. Calculate language score
+                # 6. Calculate language score (handles objects with name/fluency)
                 language_score = 0.0
-                resume_langs = resume.get('languages', [])
-                job_langs = job_requirements.get('languages', [])
-                
+                raw_langs = resume.get('languages', [])
+                resume_langs = []
+                for item in raw_langs:
+                    if isinstance(item, str):
+                        resume_langs.append(item)
+                    elif isinstance(item, dict):
+                        name = item.get('name') or ''
+                        if name:
+                            resume_langs.append(name)
+                job_langs = job_requirements.get('languages', []) or []
                 if resume_langs and job_langs:
-                    lang_matches = []
-                    for r_lang in resume_langs:
-                        for j_lang in job_langs:
-                            if r_lang.lower() == j_lang.lower():
-                                lang_matches.append(r_lang)
-                                match_reasons.append(f"Speaks required language: {r_lang}")
+                    matches = []
+                    for r in resume_langs:
+                        for j in job_langs:
+                            if r.strip().lower() == j.strip().lower():
+                                matches.append(r)
+                                match_reasons.append(f"Speaks required language: {r}")
                                 break
-                    
-                    language_score = len(lang_matches) / len(job_langs)
-                
+                    language_score = len(matches) / len(job_langs)
                 score_components['languages'] = language_score
                 
                 # Calculate final score with weights
