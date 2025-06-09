@@ -6,12 +6,14 @@ import HomeHero from '../components/HomeHero';
 import { CheckCircleOutline } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { supabase } from '../supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
 const HomePage = () => {
   const features = [
     {
       title: "For Job Seekers",
-      description: "Create your professional profile and let AI match you with the perfect opportunities on QuirkHire.",
+      description: "Create your professional profile and let us match you with the perfect opportunities on QuirkHire.",
       icon: "👤",
       gradient: "linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%)",
       items: [
@@ -20,11 +22,11 @@ const HomePage = () => {
         "Professional profile creation",
         "Increased visibility to recruiters"
       ],
-      cta: "Upload Resume"
+      cta: "Create your Resume"
     },
     {
       title: "For Recruiters",
-      description: "Access our extensive database of candidates and find the perfect match using AI on QuirkHire.",
+      description: "Access our extensive database of candidates and find the perfect match using QuirkHire.",
       icon: "🎯",
       gradient: "linear-gradient(135deg, #4ECDC4 0%, #556270 100%)",
       items: [
@@ -38,10 +40,10 @@ const HomePage = () => {
   ];
 
   const stats = [
-    { value: "10,000+", label: "Successful Matches on QuirkHire" },
-    { value: "95%", label: "Candidate Satisfaction with QuirkHire" },
-    { value: "3x", label: "Faster Hiring with QuirkHire" },
-    { value: "50+", label: "Industries Served by QuirkHire" }
+    { value: "Real-Time", label: "Job Matching" },
+    { value: "Unlimited", label: "Resumes & Profiles" },
+    { value: "Hybrid AI", label: "Deep Thinking" },
+    { value: "Always Free", label: "For Job Seekers" }
   ];
 
   const testimonials = [
@@ -76,6 +78,22 @@ const HomePage = () => {
   ];
 
   const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const navigate = useNavigate();
+
+  const handleFeatureClick = async (feature) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (feature.cta === 'Create your Resume') {
+      session ? navigate('/resume/create') : navigate('/signup/candidate');
+    } else if (feature.cta === 'Start Recruiting') {
+      session ? navigate('/recommend') : navigate('/signup/recruiter');
+    }
+  };
+
+  const handleGetStartedFree = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    session ? navigate('/resume/create') : navigate('/signup/candidate');
+  };
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -177,6 +195,7 @@ const HomePage = () => {
                     <Button
                       variant="contained"
                       fullWidth
+                      onClick={() => handleFeatureClick(feature)}
                       sx={{
                         mt: 3,
                         background: feature.gradient,
@@ -274,35 +293,13 @@ const HomePage = () => {
                   borderRadius: '20px',
                   overflow: 'hidden',
                   boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-                  position: 'relative',
-                  pt: '56.25%', // 16:9 aspect ratio
-                  background: '#1a1a1a'
                 }}>
-                  <Box sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'column',
-                    gap: 2,
-                    color: 'white'
-                  }}>
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    >
-                      <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                        Demo Coming Soon!
-                      </Typography>
-                    </motion.div>
-                    <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                      We're putting the finishing touches on something amazing
-                    </Typography>
-                  </Box>
+                  <video
+                    controls
+                    poster="/thumbnail.png"  // placeholder, update path as needed
+                    src="/tuto.mp4"
+                    style={{ width: '100%', height: 'auto', display: 'block' }}
+                  />
                 </Box>
               </motion.div>
             </Grid>
@@ -333,6 +330,7 @@ const HomePage = () => {
             <Button 
               variant="contained" 
               size="large"
+              onClick={handleGetStartedFree}
               sx={{
                 px: 6,
                 py: 2,

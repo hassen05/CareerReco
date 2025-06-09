@@ -75,16 +75,14 @@ const SearchForm = ({ onSubmit, loading }) => {
   const theme = useTheme();
   const [jobDesc, setJobDesc] = useState('');
   const [topN, setTopN] = useState(5);
-  const [recommendationType, setRecommendationType] = useState('traditional');
-  const [llmModel, setLlmModel] = useState('llama4');
+  const [recommendationType, setRecommendationType] = useState('hybrid');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit({ 
       jobDesc, 
       topN: Number(topN),
-      recommendationType,
-      llmModel
+      recommendationType
     });
   };
 
@@ -201,46 +199,6 @@ const SearchForm = ({ onSubmit, loading }) => {
               </RadioGroup>
             </FormControl>
           </Box>
-          
-          {(recommendationType === 'hybrid' || recommendationType === 'llm_only') && (
-            <Box sx={{ mb: 3 }}>
-              <FormControl component="fieldset">
-                <FormLabel component="legend" sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  mb: 1,
-                  color: 'text.primary',
-                  fontWeight: 500
-                }}>
-                  <SmartToyIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                  LLM Model
-                </FormLabel>
-                
-                <RadioGroup
-                  row
-                  name="llm-model"
-                  value={llmModel}
-                  onChange={(e) => setLlmModel(e.target.value)}
-                >
-                  <Tooltip title="Meta's Llama 4 Maverick - Better at reasoning about professional context">
-                    <FormControlLabel 
-                      value="llama4" 
-                      control={<Radio />} 
-                      label="Llama 4 Maverick" 
-                    />
-                  </Tooltip>
-                  
-                  <Tooltip title="NVIDIA's Nemotron Super 49B - Powerful for structured analysis">
-                    <FormControlLabel 
-                      value="nemotron" 
-                      control={<Radio />} 
-                      label="Nemotron Super 49B" 
-                    />
-                  </Tooltip>
-                </RadioGroup>
-              </FormControl>
-            </Box>
-          )}
 
           <Button
             type="submit"

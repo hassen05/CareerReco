@@ -2,9 +2,16 @@
 import React from 'react';
 import { Box, Typography, Button, Container, Grid } from '@mui/material';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
 const HomeHero = () => {
+  const navigate = useNavigate();
+  const handleGetStarted = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    session ? navigate('/recommend') : navigate('/signup/recruiter');
+  };
+
   return (
     <Box sx={{
       height: { xs: '90vh', md: '100vh' },
@@ -57,8 +64,7 @@ const HomeHero = () => {
               
               <Box sx={{ display: 'flex', gap: 3 }}>
                 <Button
-                  component={Link}
-                  to="/recommend"
+                  onClick={handleGetStarted}
                   variant="contained"
                   size="large"
                   sx={{

@@ -1034,6 +1034,7 @@ const CreateResumePage = () => {
             <Button
               type="submit"
               variant="contained"
+              disabled={submitting}
               sx={{
                 px: 5,
                 py: 1.5,
@@ -1043,7 +1044,10 @@ const CreateResumePage = () => {
                 boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
               }}
             >
-              Save & Preview
+              {submitting
+                ? <CircularProgress size={24} color="inherit" />
+                : 'Save & Preview'
+              }
             </Button>
           </Box>
         </Box>

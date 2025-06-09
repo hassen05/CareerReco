@@ -89,8 +89,7 @@ except Exception as e:
 
 # LLM Models available
 LLM_MODELS = {
-    "llama4": "meta-llama/llama-4-maverick:free",
-    "nemotron": "nvidia/llama-3.3-nemotron-super-49b-v1:free"
+    "llama4": "meta-llama/llama-4-maverick:free"
 }
 
 # Default model to use

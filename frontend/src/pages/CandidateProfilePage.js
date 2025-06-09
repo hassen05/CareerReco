@@ -950,7 +950,7 @@ function CandidateProfilePage() {
                 }}
                 aria-label="Reviews"
               >
-                Write a review
+                Write us a review
               </Button>
             </>
           )}
