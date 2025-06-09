@@ -74,7 +74,7 @@ function CandidateSignup() {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: 'http://localhost:3001/complete-profile',
+          emailRedirectTo: process.env.REACT_APP_SITE_URL + '/complete-profile',
           data: { 
             role: 'candidate',
             account_type: 'candidate',

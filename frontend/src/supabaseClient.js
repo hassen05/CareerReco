@@ -5,7 +5,7 @@ const supabaseKey = process.env.REACT_APP_SUPABASE_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    redirectTo: process.env.REACT_APP_SITE_URL + '/complete-profile',
+    redirectTo: process.env.REACT_APP_SITE_URL,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true

@@ -41,7 +41,7 @@ function App() {
   useEffect(() => {
     const handleAuthRedirect = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session && location.hash.includes('type=email')) {
+      if (session && location.hash.includes('type=signup')) {
         navigate('/complete-profile');
       }
     };
